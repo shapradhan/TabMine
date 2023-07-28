@@ -1,3 +1,4 @@
+import networkx as nx
 from community import community_louvain as cl
 from dotenv import load_dotenv
 from os import getenv
