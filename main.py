@@ -1,3 +1,4 @@
+from community import community_louvain as cl
 from dotenv import load_dotenv
 from os import getenv
 
@@ -26,3 +27,4 @@ if __name__ == '__main__':
     nodes = [i[0] for i in get_table_names(cur)]
     edges = [get_edges(i) for i in all_fk_rels]
     und_G = initialize_graph(nodes, edges, directed=False)
+    partition = cl.best_partition(und_G)
