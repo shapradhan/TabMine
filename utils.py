@@ -10,7 +10,7 @@ def _get_parent_node(fk_rel):
 
 def get_edges(fk_rel):
     child_node = fk_rel[0]
-    parent_node = _get_parent_node(fk_rel, child_node)
+    parent_node = _get_parent_node(fk_rel)
     return (parent_node, child_node)
 
 def _get_word_between_strings(text, start_str, end_str):
