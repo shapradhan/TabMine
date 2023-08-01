@@ -3,6 +3,7 @@ import networkx as nx
 import os
 import re
 
+
 def _get_parent_node(fk_rel):
     start_str = 'REFERENCES'
     end_str = '('
@@ -41,6 +42,7 @@ def draw_graph(G, partition, title):
     plt.legend()
     plt.axis('off')
     plt.show()
+
 def group_nodes_by_community(partition):
     community_nodes = {}
     for node, community_id in partition.items():
@@ -48,3 +50,15 @@ def group_nodes_by_community(partition):
         community_nodes.setdefault(community_id, []).append(node)
     return community_nodes
 
+def find_connecting_nodes(graph, community_nodes):
+    connecting_nodes = {}
+    for c1 in community_nodes:
+        for c2 in community_nodes:
+            if c1 != c2:
+                connecting_nodes[(c1, c2)] = set()
+                for node in community_nodes[c1]:
+                    neighbors = graph.neighbors(node)
+                    intersecting_node = set(neighbors).intersection(community_nodes[c2])
+                    if intersecting_node:
+                        connecting_nodes[(c1, c2)].update(intersecting_node)
+    return connecting_nodes
