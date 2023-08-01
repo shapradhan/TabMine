@@ -69,3 +69,7 @@ def get_nodes_in_community(partition, community_id):
 def _make_subfolder(subfolder_name):
     if not os.path.exists(subfolder_name):
         os.makedirs(subfolder_name)
+
+def get_string_embedding(input_string, embedding_model):
+    embeddings = embedding_model([input_string])
+    return embeddings[0]
