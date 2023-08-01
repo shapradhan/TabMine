@@ -22,3 +22,11 @@ def load_embeddings_from_file(filename):
 
     embeddings_list = embeddings_array.tolist()
     return embeddings_list
+
+def calculate_average_embedding(embeddings):
+    if len(embeddings) == 0:
+        raise ValueError("Input emebddings list is empty.")
+    
+    embeddings_array = np.array(embeddings)
+    average_embedding = np.mean(embeddings_array, axis=0)   # Average embedding along the first axis (axis=0)
+    return average_embedding
