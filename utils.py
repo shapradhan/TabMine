@@ -65,3 +65,7 @@ def find_connecting_nodes(graph, community_nodes):
 
 def get_nodes_in_community(partition, community_id):
     return [node for node, comm_id in partition.items() if comm_id == community_id]
+
+def _make_subfolder(subfolder_name):
+    if not os.path.exists(subfolder_name):
+        os.makedirs(subfolder_name)
