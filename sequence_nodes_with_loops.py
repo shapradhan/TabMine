@@ -6,9 +6,6 @@ from embeddings_utils import get_string_embedding, save_embeddings_to_file, load
     calculate_average_similarity_of_embeddings, compute_average_embedding, calculate_similarity_between_embeddings
 from utils import is_file_in_subfolder
 
-def create_sentence_embeddings(text_list, embeddings_identifier):
-    model_url = "https://tfhub.dev/google/universal-sentence-encoder-large/5"
-    model = hub.load(model_url)
 def move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict):
     """Moves a node according to its similarity to neighboring nodes
     
@@ -57,57 +54,13 @@ def move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict):
             return left_nodes, right_nodes
 
         return left_nodes, right_nodes
-    
-    return embeddings
 
-def load_embeddings_from_file(filename):
-    print('loading {0}'.format(filename))
-    embeddings_array = np.load(filename)
 
     embeddings_list = embeddings_array.tolist()
     return embeddings_list
 
-def calculate_average_embedding(embeddings):
-    if len(embeddings) == 0:
-        raise ValueError("Input emebddings list is empty.")
     
-    embeddings_array = np.array(embeddings)
-    average_embedding = np.mean(embeddings_array, axis=0)   # Average embedding along the first axis (axis=0)
-    return average_embedding
 
-def calculate_average_similarity(embeddings):
-    if len(embeddings) <= 1:
-        raise ValueError("Input embeddings list should have at least 2 elements.")
-
-    embeddings_array = np.array(embeddings)
-    similarity_matrix = cosine_similarity(embeddings_array)
-
-    # Exclude self-similarity and calculate the average similarity
-    n = len(embeddings)
-    average_similarity = (np.sum(similarity_matrix) - n) / (n * (n - 1))
-
-    return average_similarity
-
-
-def calculate_cosine_similarity(embedding1, embedding2):
-    embedding1 = np.array(embedding1)
-    embedding2 = np.array(embedding2)
-
-    # Reshape the embeddings to be 2D arrays for cosine_similarity function
-    if embedding1.ndim == 1:
-        embedding1 = embedding1.reshape(1, -1)
-    if embedding2.ndim == 1:
-        embedding2 = embedding2.reshape(1, -1)
-
-    similarity = cosine_similarity(embedding1, embedding2)
-
-    # Since the input might be 1D, return the similarity value directly
-    if similarity.size == 1:
-        return similarity[0, 0]
-
-    # If the input is 2D, return the 2D array of similarity values
-    return similarity
-def move_until_above_threshold(full_node_list, table_description_dict):
     new_list = []
     for node_list in full_node_list:
         node_list_embeddings = create_sentence_embeddings(node_list, embeddings_identifier='node_list')
