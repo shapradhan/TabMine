@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy as np
 import os
 import re
 
@@ -73,3 +74,9 @@ def _make_subfolder(subfolder_name):
 def get_string_embedding(input_string, embedding_model):
     embeddings = embedding_model([input_string])
     return embeddings[0]
+
+def save_embeddings_to_file(embeddings, filename, folder):
+    _make_subfolder(folder)
+
+    file_path = os.path.join(folder, filename)
+    np.save(file_path, embeddings)
