@@ -1,5 +1,7 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+import os
+
 import tensorflow_hub as hub
 
 def save_embeddings_to_file(embeddings, filename):
@@ -44,3 +46,8 @@ def calculate_average_similarity(embeddings):
     average_similarity = (np.sum(similarity_matrix) - n) / (n * (n - 1))
 
     return average_similarity
+
+def is_file_in_current_folder(filename):
+    current_directory = os.getcwd()
+    file_path = os.path.join(current_directory, filename)
+    return os.path.isfile(file_path)
