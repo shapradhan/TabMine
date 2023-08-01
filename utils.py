@@ -71,15 +71,5 @@ def _make_subfolder(subfolder_name):
     if not os.path.exists(subfolder_name):
         os.makedirs(subfolder_name)
 
-def get_string_embedding(input_string, embedding_model):
-    embeddings = embedding_model([input_string])
-    return embeddings[0]
 
-def save_embeddings_to_file(embeddings, filename, folder):
-    _make_subfolder(folder)
 
-    file_path = os.path.join(folder, filename)
-    np.save(file_path, embeddings)def is_file_in_current_folder(filename):
-    current_directory = os.getcwd()
-    file_path = os.path.join(current_directory, filename)
-    return os.path.isfile(file_path)
