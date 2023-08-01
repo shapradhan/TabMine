@@ -118,3 +118,27 @@ def move_until_above_threshold(full_node_list, table_description_dict):
             else:
                 new_list.append(node_list)
     return new_list
+if __name__ == '__main__':
+    nlp = spacy.load('en_core_web_lg')
+
+    df = pd.read_csv('contrived_descriptions.csv')
+    # Contrived
+    full_nodes_list = ['sales_1', 'sales_2', 'sales_flow_1', 'sales_flow_2', 'bill_1', 'bill_2', 'delivery_1']
+
+    full_nodes_desc = [df.loc[df['tables'] == node, 'descriptions'].iloc[0] for node in full_nodes_list]
+
+    dict_data_records = df.to_dict(orient='records')
+    table_description_dict = {item['tables']: item['descriptions'] for item in dict_data_records}
+
+    
+    # Calculate the average embeddings similarity in the complete sequence
+    full_nodes_embeddings = load_or_create_embeddings(filename='contrived_2_full_nodes_embeddings.npy', embeddings_identifier='contrived_2_full_nodes', nodes=full_nodes_desc)
+    full_nodes_embeddings_average_similarity = calculate_average_similarity(full_nodes_embeddings)
+    sim_threshold = 0.8
+
+    if full_nodes_embeddings_average_similarity < sim_threshold:
+        all_above_threshold = False
+
+    while not all_above_threshold:
+        full_nodes_list = move_until_above_threshold([full_nodes_list], table_description_dict)
+        full_nodes_list = move_until_above_threshold(full_nodes_list, table_description_dict)
