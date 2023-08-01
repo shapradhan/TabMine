@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 import tensorflow_hub as hub
 
 def save_embeddings_to_file(embeddings, filename):
