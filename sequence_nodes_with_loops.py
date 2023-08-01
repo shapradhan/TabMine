@@ -15,3 +15,10 @@ def create_sentence_embeddings(text_list, embeddings_identifier):
     save_embeddings_to_file(embeddings, "embeddings_{0}.npy".format(embeddings_identifier))
     
     return embeddings
+
+def load_embeddings_from_file(filename):
+    print('loading {0}'.format(filename))
+    embeddings_array = np.load(filename)
+
+    embeddings_list = embeddings_array.tolist()
+    return embeddings_list
