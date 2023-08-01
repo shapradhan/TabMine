@@ -42,10 +42,6 @@ def calculate_average_similarity(embeddings):
 
     return average_similarity
 
-def is_file_in_current_folder(filename):
-    current_directory = os.getcwd()
-    file_path = os.path.join(current_directory, filename)
-    return os.path.isfile(file_path)
 
 def calculate_cosine_similarity(embedding1, embedding2):
     embedding1 = np.array(embedding1)

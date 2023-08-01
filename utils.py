@@ -79,4 +79,7 @@ def save_embeddings_to_file(embeddings, filename, folder):
     _make_subfolder(folder)
 
     file_path = os.path.join(folder, filename)
-    np.save(file_path, embeddings)
+    np.save(file_path, embeddings)def is_file_in_current_folder(filename):
+    current_directory = os.getcwd()
+    file_path = os.path.join(current_directory, filename)
+    return os.path.isfile(file_path)
