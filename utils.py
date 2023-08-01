@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import networkx as nx
+import os
 import re
 
 def _get_parent_node(fk_rel):
@@ -40,3 +41,10 @@ def draw_graph(G, partition, title):
     plt.legend()
     plt.axis('off')
     plt.show()
+def group_nodes_by_community(partition):
+    community_nodes = {}
+    for node, community_id in partition.items():
+        # Get the community_id and make that a key of an empty list, in which the nodes are appended
+        community_nodes.setdefault(community_id, []).append(node)
+    return community_nodes
+
