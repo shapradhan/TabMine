@@ -51,3 +51,22 @@ def is_file_in_current_folder(filename):
     current_directory = os.getcwd()
     file_path = os.path.join(current_directory, filename)
     return os.path.isfile(file_path)
+
+def calculate_cosine_similarity(embedding1, embedding2):
+    embedding1 = np.array(embedding1)
+    embedding2 = np.array(embedding2)
+
+    # Reshape the embeddings to be 2D arrays for cosine_similarity function
+    if embedding1.ndim == 1:
+        embedding1 = embedding1.reshape(1, -1)
+    if embedding2.ndim == 1:
+        embedding2 = embedding2.reshape(1, -1)
+
+    similarity = cosine_similarity(embedding1, embedding2)
+
+    # Since the input might be 1D, return the similarity value directly
+    if similarity.size == 1:
+        return similarity[0, 0]
+
+    # If the input is 2D, return the 2D array of similarity values
+    return similarity
