@@ -70,3 +70,51 @@ def calculate_cosine_similarity(embedding1, embedding2):
 
     # If the input is 2D, return the 2D array of similarity values
     return similarity
+def move_until_above_threshold(full_node_list, table_description_dict):
+    new_list = []
+    for node_list in full_node_list:
+        node_list_embeddings = create_sentence_embeddings(node_list, embeddings_identifier='node_list')
+        node_list_embeddings_average_similarity = calculate_average_similarity(node_list_embeddings)
+        sim_threshold = 0.8
+
+        if node_list_embeddings_average_similarity < sim_threshold:
+            all_above_threshold = False
+
+            num_nodes = len(node_list)
+            cut_off_index = num_nodes // 2
+            if num_nodes % 2 == 0:
+                left_nodes = node_list[:cut_off_index]
+                right_nodes = node_list[cut_off_index:]
+            else:
+                left_nodes = node_list[:cut_off_index]
+                right_nodes = node_list[cut_off_index+1:]
+                mid_node = node_list[cut_off_index]
+                mid_node_description = table_description_dict[mid_node]
+                mid_node_embeddings = create_sentence_embeddings(text_list=[mid_node_description], embeddings_identifier='mid_node')
+            left_nodes_descriptions = [table_description_dict[node] for node in left_nodes]
+            right_nodes_descriptions = [table_description_dict[node] for node in right_nodes]
+            left_nodes_embeddings = create_sentence_embeddings(text_list=left_nodes_descriptions, embeddings_identifier='contrived_2_left_nodes')
+            right_nodes_embeddings = create_sentence_embeddings(text_list=right_nodes_descriptions, embeddings_identifier='contrived_2_right_nodes')
+
+            left_nodes_avg_embeddings = calculate_average_embedding(left_nodes_embeddings)
+            right_nodes_avg_embeddings = calculate_average_embedding(right_nodes_embeddings)
+
+            if num_nodes % 2 == 0:
+                pass
+            else:
+                mid_left_similarity_score = calculate_cosine_similarity(mid_node_embeddings, left_nodes_avg_embeddings)
+                mid_right_similarity_score = calculate_cosine_similarity(mid_node_embeddings, right_nodes_avg_embeddings)
+
+                if mid_left_similarity_score >= mid_right_similarity_score:
+                    left_nodes.append(mid_node)
+                else:
+                    right_nodes.append(mid_node)
+
+                new_list.append(left_nodes)
+                new_list.append(right_nodes)
+        else:
+            if len(new_list) == 0:
+                new_list = node_list
+            else:
+                new_list.append(node_list)
+    return new_list
