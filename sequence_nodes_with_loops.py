@@ -1,13 +1,8 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import os
-
 import tensorflow_hub as hub
 
-def save_embeddings_to_file(embeddings, filename):
-    print("saving embedding {0}".format(filename))
-    embeddings_array = np.array(embeddings)
-    np.save(filename, embeddings_array)
 
 def create_sentence_embeddings(text_list, embeddings_identifier):
     model_url = "https://tfhub.dev/google/universal-sentence-encoder-large/5"
