@@ -62,3 +62,6 @@ def find_connecting_nodes(graph, community_nodes):
                     if intersecting_node:
                         connecting_nodes[(c1, c2)].update(intersecting_node)
     return connecting_nodes
+
+def get_nodes_in_community(partition, community_id):
+    return [node for node, comm_id in partition.items() if comm_id == community_id]
