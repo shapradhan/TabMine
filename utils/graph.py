@@ -1,4 +1,7 @@
+import matplotlib.pyplot as plt
 import networkx as nx
+
+from utils.general import get_word_between_strings
 
 def initialize_graph(nodes, edges, directed=False):
     """Intialize a Networkx graph
@@ -21,8 +24,7 @@ def initialize_graph(nodes, edges, directed=False):
     return G
 
 def get_nodes_in_community(partition, community_id):
-    """
-    Get nodes belonging to a specific community.
+    """Get nodes belonging to a specific community.
 
     Args:
         partition (dict): A dictionary where keys are nodes and values are community IDs.
@@ -51,8 +53,7 @@ def group_nodes_by_community(partition):
     return community_nodes
 
 def find_connecting_nodes(graph, community_nodes):
-    """
-    Find nodes that connect a community to nodes outside the community.
+    """Find nodes that connect a community to nodes outside the community.
 
     Parameters:
         graph (networkx.Graph): The graph in which to search for connecting nodes.
@@ -73,3 +74,77 @@ def find_connecting_nodes(graph, community_nodes):
                     if intersecting_node:
                         connecting_nodes[(c1, c2)].update(intersecting_node)
     return connecting_nodes
+
+def _get_parent_node(foreign_key_relation_list):
+    """ Extract the name of the parent node 
+    
+    Parent node is the table whose primary key is used as the foreign key in another table.
+    The foreign key relation text is the third item, denoted by index 2, in the list.
+    The name is after the word 'REFERENCES' and before the opening parenthesis. 
+    
+    Args:
+        foreign_key_relation_list (list): A list containing the foreign key relation text, among others.
+    
+    Returns:
+        str: The name of the parent node (table)
+    """
+
+    start_str = 'REFERENCES'
+    end_str = '('
+    return get_word_between_strings(foreign_key_relation_list[2], start_str, end_str).strip()
+
+def get_edges(foreign_key_relation_list):
+    """ Get the nodes representing the two ends of an edge
+
+    The first item of the tuple is the parent node (i.e., the table whose primary key is used as the foreign key in another table).
+    The second item of the tuple is the child node (i.e., the table that is using the primary key of another table as the foreign key).
+
+    Args:
+        foreign_key_relation_list (list): A list containing the foreign key relation text, among others.
+
+    Returns:
+        tuple: A tuple representing the nodes at the two ends of an edge    
+    """
+
+    child_node = foreign_key_relation_list[0]
+    parent_node = _get_parent_node(foreign_key_relation_list)
+    return (parent_node, child_node)
+
+def draw_graph(G, partition, title):
+    """
+    Draws and displays a graph with nodes colored based on the provided partition.
+
+    This function uses the matplotlib library to visualize the graph G. Nodes are colored
+    according to the given partition, which is a dictionary where keys are node IDs and
+    values are integers representing the partition index. The title parameter is used to
+    set the title of the graph plot.
+
+    Parameters:
+    G (networkx.Graph): The graph to be drawn.
+    partition (dict): A partition of the graph nodes, where keys are node IDs and values
+                     are integers representing the partition index.
+    title (str): The title to be displayed above the graph plot.
+
+    Returns:
+        None
+    """
+     
+    pos = nx.spring_layout(G)
+
+    plt.figure(figsize=(10, 6))
+
+    for node in G.nodes():
+        community_id = partition[node]
+        node_color = plt.cm.tab20(community_id)
+        nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=node_color, node_size=200, label=f"Community {community_id}")
+
+    # Draw edges
+    nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5)
+
+    # Draw node labels
+    nx.draw_networkx_labels(G, pos, font_size=10, font_color='black')
+
+    plt.title(title)
+    plt.legend()
+    plt.axis('off')
+    plt.show()
