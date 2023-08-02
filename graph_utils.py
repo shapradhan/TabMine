@@ -19,3 +19,17 @@ def initialize_graph(nodes, edges, directed=False):
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
     return G
+
+def get_nodes_in_community(partition, community_id):
+    """
+    Get nodes belonging to a specific community.
+
+    Args:
+        partition (dict): A dictionary where keys are nodes and values are community IDs.
+        community_id (int): The ID of the community to extract.
+
+    Returns:
+        list: A list of nodes belonging to the specified community.
+    """
+    
+    return [node for node, comm_id in partition.items() if comm_id == community_id]
