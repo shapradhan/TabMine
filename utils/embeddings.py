@@ -2,10 +2,10 @@ import numpy as np
 import os
 
 from sklearn.metrics.pairwise import cosine_similarity
-from utils import make_subfolder
+from utils.general import make_subfolder
 
 
-def get_string_embedding(input_string, embedding_model):
+def create_string_embeddings(input_string, embedding_model):
     """Get embeddings for a given input string using the specified embedding model.
 
     Args:
