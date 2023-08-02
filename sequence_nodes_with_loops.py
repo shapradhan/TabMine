@@ -4,7 +4,7 @@ import tensorflow_hub as hub
 
 from embeddings_utils import get_string_embedding, save_embeddings_to_file, load_embeddings_from_file, \
     calculate_average_similarity_of_embeddings, compute_average_embedding, calculate_similarity_between_embeddings
-from utils import is_file_in_subfolder
+from utils import is_file_in_subfolder, all_values_higher_than
 
 def move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict):
     """Moves a node according to its similarity to neighboring nodes
@@ -129,7 +129,8 @@ def move_until_above_threshold(full_node_list, embeddings_dict):
         else:
             new_list.append(node_list)        
     return new_list
-            
+
+        
 
 if __name__ == '__main__':
     nlp = spacy.load('en_core_web_lg')
@@ -170,15 +171,38 @@ if __name__ == '__main__':
         embeddings_dict[table] = embeddings
         full_nodes_embeddings.append(embeddings)
     
-    all_above_threshold = False
-    while not all_above_threshold:
-        full_nodes_embeddings_average_similarity = calculate_average_similarity_of_embeddings(full_nodes_embeddings)
-        sim_threshold = 0.8
+
+    all_above_threshold = False     
+    SIMILARITY_THRESHOLD = 0.7
+    full_nodes_list = [full_nodes_list]
     
-        full_nodes_list = move_until_above_threshold([full_nodes_list], embeddings_dict)
-        print('FNL 1:', full_nodes_list)
-        full_nodes_list = move_until_above_threshold(full_nodes_list, embeddings_dict)
-        print('FNL 2:', full_nodes_list)
-        full_nodes_list = move_until_above_threshold(full_nodes_list, embeddings_dict)
-        print('FNL 3:', full_nodes_list)
-        all_above_threshold = True
+    while not all_above_threshold:
+        similarity_scores_list = []
+
+        for node_list in full_nodes_list:
+            node_list_embeddings = []
+
+            # For each node (table) in node list, get embeddings
+            for i in node_list:
+                embeddings_filename = '{0}_embeddings.npy'.format(i)
+                embeddings = load_embeddings_from_file(EMBEDDINGS_FOLDER_NAME, embeddings_filename)
+                node_list_embeddings.append(embeddings)
+           
+            # Calculate the average similarity of the embeddings and append it to a list
+            # For example, if node_list = [[A, B, C], [D, E]], calculate the similarity of [A, B, C] and append to similarity_scores_list
+            # Then, calculate the similarity of [D, E] and append that to similarity_scores_list
+            node_list_embeddings_average_similarity = calculate_average_similarity_of_embeddings(node_list_embeddings)
+            similarity_scores_list.append(node_list_embeddings_average_similarity)
+
+        # Check if all the values in the similarity score list are higher than the threshold value
+        all_values_higher = all_values_higher_than(similarity_scores_list, SIMILARITY_THRESHOLD)
+
+        # If all values in the similarity score list are higher than the threshold value, break out of the while-loop
+        # Else, move the nodes
+        if all_values_higher:
+            all_above_threshold = True
+            break
+        else:
+            full_nodes_list = move_until_above_threshold(full_nodes_list, embeddings_dict)   
+
+    print('final communitieis', full_nodes_list)
