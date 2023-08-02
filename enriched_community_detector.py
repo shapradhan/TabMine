@@ -89,8 +89,5 @@ def enriched_community_detector(df, partition, connecting_nodes_list, embedding_
                 partition[connecting_node] = key[0]
             else:
                 partition[connecting_node] = key[1]
-                
-        else:
-            raise ValueError('Description is not available')
         
         return partition
