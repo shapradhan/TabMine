@@ -6,7 +6,7 @@ from utils import make_subfolder
 
 
 def get_string_embedding(input_string, embedding_model):
-    """Gets embeddings for a given input string using the specified embedding model.
+    """Get embeddings for a given input string using the specified embedding model.
 
     Args:
         input_string (str): The input string for which embeddings are to be generated.
@@ -21,7 +21,7 @@ def get_string_embedding(input_string, embedding_model):
     return embeddings[0]
 
 def save_embeddings_to_file(embeddings, folder, filename):
-    """Saves embeddings to a file in a given folder
+    """Save embeddings to a file in a given folder
 
     Args:
         embeddings (tf.Tensor):  A TensorFlow EagerTensor containing the embeddings to be saved.
@@ -37,7 +37,7 @@ def save_embeddings_to_file(embeddings, folder, filename):
     np.save(file_path, embeddings)
 
 def load_embeddings_from_file(subfolder_name, filename):
-    """Loads embeddings of a particular file stored in a subfolder
+    """Load embeddings of a particular file stored in a subfolder
     
     Args:
         subfolder_name (str): The name of the subfolder
@@ -52,7 +52,7 @@ def load_embeddings_from_file(subfolder_name, filename):
     return embeddings_array
 
 def compute_average_embedding(embeddings):
-    """Computes the avareage embedding from a list of embeddings
+    """Compute the avareage embedding from a list of embeddings
     
     Args:
         embeddings (list): A list of embeddings
@@ -69,7 +69,7 @@ def compute_average_embedding(embeddings):
     return average_embedding
 
 def calculate_average_similarity_of_embeddings(embeddings):
-    """Calculates the average similarity of given embeddings
+    """Calculate the average similarity of given embeddings
     
     Args:
         embeddings (list): A list of embeddings
@@ -93,7 +93,7 @@ def calculate_average_similarity_of_embeddings(embeddings):
     return average_similarity
 
 def calculate_similarity_between_embeddings(embedding1, embedding2):
-    """Calculates similarity score between two embeddings using cosine similarity
+    """Calculate similarity score between two embeddings using cosine similarity
     
     Args:
         embeddings1 (list): A list of embeddings
