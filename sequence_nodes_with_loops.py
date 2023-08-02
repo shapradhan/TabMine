@@ -18,7 +18,11 @@ def move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict):
         list, list: left nodes and right nodes after their nodes have been moved
     """
 
-    if len(left_nodes) >= 2 and len(right_nodes) >= 2:
+    # If left nodes and right nodes contain only one item each, return those items
+    if len(left_nodes) == 1 and len(left_nodes) == 1:
+        return left_nodes, right_nodes
+
+    if len(left_nodes) > 1 and len(right_nodes) > 1:
         # Extract the last two nodes from the left nodes and first two nodes from the right nodes
         left_last_item = left_nodes[-1]
         left_second_last_item = left_nodes[-2]

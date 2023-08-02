@@ -79,14 +79,16 @@ def calculate_average_similarity_of_embeddings(embeddings):
     """
 
     if len(embeddings) <= 1:
-        raise ValueError("Input embeddings list should have at least 2 elements.")
+        average_similarity = 1
+        # raise ValueError("Input embeddings list should have at least 2 elements.")
 
-    embeddings_array = np.array(embeddings)
-    similarity_matrix = cosine_similarity(embeddings_array)
+    else:
+        embeddings_array = np.array(embeddings)
+        similarity_matrix = cosine_similarity(embeddings_array)
 
-    # Exclude self-similarity and calculate the average similarity
-    n = len(embeddings)
-    average_similarity = (np.sum(similarity_matrix) - n) / (n * (n - 1))
+        # Exclude self-similarity and calculate the average similarity
+        n = len(embeddings)
+        average_similarity = (np.sum(similarity_matrix) - n) / (n * (n - 1))
 
     return average_similarity
 
