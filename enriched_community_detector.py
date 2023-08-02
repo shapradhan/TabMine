@@ -90,4 +90,4 @@ def enriched_community_detector(df, partition, connecting_nodes_list, embedding_
             else:
                 partition[connecting_node] = key[1]
         
-        return partition
+    return partition
