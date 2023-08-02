@@ -73,3 +73,14 @@ def _make_subfolder(subfolder_name):
 
 
 
+def all_values_higher_than(lst, threshold):
+    """Check if all values in a list are higher than a certain threshold.
+
+    Args:
+        lst (list of int or float): The list containing numeric values to be checked.
+        threshold (int or float): The threshold value to compare against.
+
+    Returns:
+        bool: True if all values are higher than the threshold, False otherwise.
+    """
+    return all(value > threshold for value in lst) 
