@@ -173,3 +173,22 @@ def _insert_into_list(lst, target_value, new_value, position):
         print("Target value not found in the list.")
     
     return lst
+
+def _check_value_in_lists(value, list1, list2):
+    """Find if a value is in either of the two lists.
+
+    This function takes a value and two lists as parameters, and it searches for the value in both lists. 
+    If the value is found in the first list, 0 is returned. 
+    If the value is found in the second list, 1 is returned.
+    If the value is not found in either list, -1 is returned. 
+
+    Args:
+        value (any): The value to search for in the lists.
+        list1 (list): The first list to search in.
+        list2 (list): The second list to search in.
+
+    Returns:
+        int: A value representing which list is the given value is found or -1 if the value is not found in either list.
+    """
+    
+    return 0 if value in list1 else (1 if value in list2 else -1)
