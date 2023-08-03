@@ -192,3 +192,51 @@ def _check_value_in_lists(value, list1, list2):
     """
     
     return 0 if value in list1 else (1 if value in list2 else -1)
+
+def get_tree_branches(connecting_node, edges):
+    """Divide the connecting nodes into left and right branches of a tree with the connecting node as the root
+
+    Args:
+        connecting_nodes (str): The node that connects the two branches
+        edges (list): A list of tuples representing the source node and target node of an edge
+    
+    Returns:
+        list, list: The left and right branches of a tree
+    """
+
+    left_branch = []
+    right_branch = []
+    for i in edges:
+        source_node = i[0]
+        target_node = i[1]
+
+        # If source node is the same as connecting node, append the target node to the left branch if it is empty.
+        # If the left branch is not empty, append the target node to the right branch, if it is empty.
+        if source_node == connecting_node:
+            if len(left_branch) == 0:
+                left_branch.append(target_node)
+            else:
+                if len(right_branch) == 0:
+                    right_branch.append(target_node)
+        else:
+            # Identify which branch are the source node and target node in
+            source_node_branch = _check_value_in_lists(source_node, left_branch, right_branch)
+            target_node_branch = _check_value_in_lists(target_node, left_branch, right_branch)
+
+            match source_node_branch:
+                case 0:
+                    left_branch = _insert_into_list(left_branch, source_node, target_node, position='before')
+                case 1:
+                    right_branch = _insert_into_list(right_branch, source_node, target_node, position='after')
+                case -1:
+                    pass
+
+            match target_node_branch:
+                case 0:
+                    left_branch = _insert_into_list(left_branch, target_node, source_node, position='before')
+                case 1:
+                    right_branch = _insert_into_list(right_branch, target_node, source_node, position='after')
+                case -1:
+                    pass
+
+    return left_branch, right_branch
