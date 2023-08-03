@@ -56,3 +56,73 @@ def move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict):
             return left_nodes, right_nodes
 
         return left_nodes, right_nodes
+
+def move_until_above_threshold(full_node_list, embeddings_dict, embeddings_folder_name):
+    """Move the nodes until a threshold is met.
+
+    Args:
+        fill_node_list (list): A list of nodes.
+        embeddings_dict (dict): A dictionary that contains the embeddings.
+    
+    Returns:
+        list: A list containing nodes that have been moved.
+    """
+
+    new_list = []
+    for node_list in full_node_list:
+        node_list_embeddings = []
+        
+        # For a group of nodes (node_list), get embeddings
+        for i in node_list:
+            embeddings_filename = '{0}_embeddings.npy'.format(i)
+            embeddings = load_embeddings_from_file(embeddings_folder_name, embeddings_filename)
+            node_list_embeddings.append(embeddings)
+
+        # Calculate the average similarity of the group of nodes
+        node_list_embeddings_average_similarity = calculate_average_similarity_of_embeddings(node_list_embeddings)
+        sim_threshold = 0.8
+
+        # If the average similarity between a group of nodes is less than a given similarity threshold, divide the list into two subgroups
+        if node_list_embeddings_average_similarity < sim_threshold:
+            num_nodes = len(node_list)
+            cut_off_index = num_nodes // 2
+
+            # Handle even and odd number of items in node list
+            if num_nodes % 2 == 0:
+                left_nodes = node_list[:cut_off_index]
+                right_nodes = node_list[cut_off_index:]
+            else:
+                left_nodes = node_list[:cut_off_index]
+                right_nodes = node_list[cut_off_index+1:]
+                mid_node = node_list[cut_off_index]
+                mid_node_embeddings = embeddings_dict[mid_node]
+            
+            # Get embeddings for nodes in left and right groups   
+            left_nodes_embeddings = [embeddings_dict[node] for node in left_nodes]
+            right_nodes_embeddings = [embeddings_dict[node] for node in right_nodes]
+
+            # Calculate the average of the embeddings of the nodes in the left and the right group
+            left_nodes_avg_embeddings = compute_average_embedding(left_nodes_embeddings)
+            right_nodes_avg_embeddings = compute_average_embedding(right_nodes_embeddings)
+
+            # Move then nodes to the group where it is more similar
+            if num_nodes % 2 == 0:
+                left_nodes, right_nodes = move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict)
+                new_list.append(left_nodes)
+                new_list.append(right_nodes)
+            else:
+                mid_left_similarity_score = calculate_similarity_between_embeddings(mid_node_embeddings, left_nodes_avg_embeddings)
+                mid_right_similarity_score = calculate_similarity_between_embeddings(mid_node_embeddings, right_nodes_avg_embeddings)
+                
+                # If similarity score of the mid node and left nodes group is higher than that of the mid node and right nodes group,
+                # move the mid node to the left nodes. Otherwise, move it to the right nodes
+                if mid_left_similarity_score >= mid_right_similarity_score:
+                    left_nodes.append(mid_node)
+                else:
+                    right_nodes.insert(0, mid_node)
+            
+                new_list.append(left_nodes)
+                new_list.append(right_nodes)
+        else:
+            new_list.append(node_list)        
+    return new_list
