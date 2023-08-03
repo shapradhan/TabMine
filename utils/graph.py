@@ -147,3 +147,29 @@ def draw_graph(G, partition, title):
     plt.legend()
     plt.axis('off')
     plt.show()
+
+def insert_into_list(lst, target_value, new_value, position):
+    """Insert a new value into the given list before or after a specified target value, depending on the value of position.
+
+    Args:
+        lst (list): The list in which the new value will be inserted.
+        target_value (str): The value after which the new value should be inserted.
+        new_value (str): The value to be inserted into the list.
+        position (str): The position where the new value should be inserted. 
+            It has two possible values 'before' the target value or 'after the target value.
+
+    Returns:
+        list: A modified list with the new value inserted before or after the target value.
+    """
+    try:
+        index = lst.index(target_value)
+        if position == 'before':
+            lst.insert(index, new_value)
+        elif position == 'after':
+            lst.insert(index + 1, new_value)
+        else:
+            raise ValueError('Proper position is not provided.')
+    except ValueError:
+        print("Target value not found in the list.")
+    
+    return lst
