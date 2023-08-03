@@ -148,7 +148,7 @@ def draw_graph(G, partition, title):
     plt.axis('off')
     plt.show()
 
-def insert_into_list(lst, target_value, new_value, position):
+def _insert_into_list(lst, target_value, new_value, position):
     """Insert a new value into the given list before or after a specified target value, depending on the value of position.
 
     Args:
