@@ -52,25 +52,24 @@ def group_nodes_by_community(partition):
         community_nodes.setdefault(community_id, []).append(node)
     return community_nodes
 
-def find_connecting_nodes(graph, community_nodes):
+def find_connecting_nodes(graph, nodes_by_community):
     """Find nodes that connect a community to nodes outside the community.
 
     Parameters:
         graph (networkx.Graph): The graph in which to search for connecting nodes.
-        community_nodes (list): A list of nodes representing a community within the graph.
+        nodes_by_community (list): A list of nodes representing a community within the graph.
 
     Returns:
         list: A list of tuples representing the nodes that connect the specified community to nodes outside the community.
     """
-
     connecting_nodes = {}
-    for c1 in community_nodes:
-        for c2 in community_nodes:
+    for c1 in nodes_by_community:
+        for c2 in nodes_by_community:
             if c1 != c2:
                 connecting_nodes[(c1, c2)] = set()
-                for node in community_nodes[c1]:
+                for node in nodes_by_community[c1]:
                     neighbors = graph.neighbors(node)
-                    intersecting_node = set(neighbors).intersection(community_nodes[c2])
+                    intersecting_node = set(neighbors).intersection(nodes_by_community[c2])
                     if intersecting_node:
                         connecting_nodes[(c1, c2)].update(intersecting_node)
     return connecting_nodes
