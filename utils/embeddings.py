@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 from sklearn.metrics.pairwise import cosine_similarity
-from utils.general import make_subfolder, is_file_in_subfolder
+from utils.general import make_subdirectory, is_file_in_subdirectory
 
 
 def create_string_embeddings(input_string, embedding_model):
@@ -33,7 +33,7 @@ def save_embeddings_to_file(embeddings, folder_name, filename):
         None
     """
     
-    make_subfolder(folder_name)
+    make_subdirectory(folder_name)
     file_path = os.path.join(folder_name, filename)
     np.save(file_path, embeddings)
 
@@ -123,7 +123,7 @@ def get_embeddings_dict(description_dict, model, embeddings_folder_name):
 
         # If embeddings file for a particular table exists, load the embeddings from file
         # If embeddings file does not exist for a particular table, create embeddings and save it in a file
-        if is_file_in_subfolder(embeddings_folder_name, embeddings_filename):
+        if is_file_in_subdirectory(embeddings_folder_name, embeddings_filename):
             embeddings = load_embeddings_from_file(embeddings_folder_name, embeddings_filename)
         else:
             embeddings = create_string_embeddings(description, model)
