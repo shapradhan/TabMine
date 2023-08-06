@@ -35,7 +35,7 @@ def detect_communities_in_node_series(nodes, embeddings_dict, similarity_thresho
         embeddings_dict (dict): A dictionary with table (node) name as the key and the embeddings of its descriptions as the value.
     
     Returns:
-        list: A list of list with nodes partitioned into communities, with each inner list is a community.
+        list: A list of list with nodes partitioned into communities, with each inner list being a community.
     """
 
     communities = []
