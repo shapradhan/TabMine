@@ -331,3 +331,23 @@ def arrange_nodes_in_series(edges):
             edges = temp_list
     
     return final_list
+
+
+def convert_communities_list_to_partition(communities):
+    """ Convert a list of communities into a dictionary representing the partitions.
+
+    Args:
+        communities (list): A list of list with nodes partitioned into communities, with each inner list being a community.
+
+    Returns: 
+        dict: The partition, with communities numbered from 0 to number of communities
+    """
+
+    partition = {}
+
+    for community in communities:
+        index = communities.index(community)
+        for node in community:
+            partition[node] = index
+
+    return partition
