@@ -4,6 +4,26 @@ from utils.embeddings import create_string_embeddings, save_embeddings_to_file, 
     calculate_average_similarity_of_embeddings, compute_average_embedding, calculate_similarity_between_embeddings
 from utils.general import is_file_in_subfolder, all_values_higher_than
 
+
+def compare_average_similarity_and_threshold(node1, node2, similarity_threshold, embeddings_dict):
+    """ Compare the average similarity of two nodes with the given similarity threshold.
+
+    Args:
+        node1 (str): A node.
+        node2 (str): A node.
+        similarity_threshold (float): The similarity threshold value.
+        embeddings_dict (dict): A dictionary with table (node) name as the key and the embeddings of its descriptions as the value.
+    
+    Returns:
+        bool: Return True if average similarity is higher than or equal to the similarity threshold. Otherwise, return False.
+    """
+
+    node1_embeddings = embeddings_dict[node1]
+    node2_embeddings = embeddings_dict[node2]
+
+    similarity_score = calculate_similarity_between_embeddings(node1_embeddings, node2_embeddings)
+
+    return True if similarity_score >= similarity_threshold else False
 def move_when_even_item_numbers(left_nodes, right_nodes, embeddings_dict):
     """Move a node according to its similarity to neighboring nodes.
     
