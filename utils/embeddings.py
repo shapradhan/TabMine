@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 from sklearn.metrics.pairwise import cosine_similarity
-from utils.general import make_subfolder
+from utils.general import make_subfolder, is_file_in_subfolder
 
 
 def create_string_embeddings(input_string, embedding_model):
@@ -20,21 +20,23 @@ def create_string_embeddings(input_string, embedding_model):
     embeddings = embedding_model([input_string])
     return embeddings[0]
 
-def save_embeddings_to_file(embeddings, folder, filename):
+
+def save_embeddings_to_file(embeddings, folder_name, filename):
     """Save embeddings to a file in a given folder
 
     Args:
         embeddings (tf.Tensor):  A TensorFlow EagerTensor containing the embeddings to be saved.
-        folder (str): The name of a folder where the file will be saved
+        folder_name (str): The name of a folder where the file will be saved
         filename (str): The name of the file to be created.
     
     Returns:
         None
     """
     
-    make_subfolder(folder)
-    file_path = os.path.join(folder, filename)
+    make_subfolder(folder_name)
+    file_path = os.path.join(folder_name, filename)
     np.save(file_path, embeddings)
+
 
 def load_embeddings_from_file(subfolder_name, filename):
     """Load embeddings of a particular file stored in a subfolder
@@ -50,6 +52,7 @@ def load_embeddings_from_file(subfolder_name, filename):
     file_path = os.path.join(os.getcwd(), subfolder_name, filename)
     embeddings_array = np.load(file_path)
     return embeddings_array
+
 
 def compute_average_embedding(embeddings):
     """Compute the avareage embedding from a list of embeddings
@@ -68,29 +71,6 @@ def compute_average_embedding(embeddings):
     average_embedding = np.mean(embeddings_array, axis=0)   # Average embedding along the first axis (axis=0)
     return average_embedding
 
-def calculate_average_similarity_of_embeddings(embeddings):
-    """Calculate the average similarity of given embeddings
-    
-    Args:
-        embeddings (list): A list of embeddings
-    
-    Returns:
-        float: The average similiarty score of the embeddings    
-    """
-
-    if len(embeddings) <= 1:
-        average_similarity = 1
-        # raise ValueError("Input embeddings list should have at least 2 elements.")
-
-    else:
-        embeddings_array = np.array(embeddings)
-        similarity_matrix = cosine_similarity(embeddings_array)
-
-        # Exclude self-similarity and calculate the average similarity
-        n = len(embeddings)
-        average_similarity = (np.sum(similarity_matrix) - n) / (n * (n - 1))
-
-    return average_similarity
 
 def calculate_similarity_between_embeddings(embedding1, embedding2):
     """Calculate similarity score between two embeddings using cosine similarity
@@ -120,3 +100,35 @@ def calculate_similarity_between_embeddings(embedding1, embedding2):
 
     # If the input is 2D, return the 2D array of similarity values
     return similarity
+
+
+def get_embeddings_dict(description_dict, model, embeddings_folder_name):
+    """Create a dictionary of embeddings with table (node) name as the key and its embeddings as the value.
+
+    Args:
+        description_dict (dict): A dictionary with table (node) name as the key and its description as the value.
+        embeddings_folder_name (str): The name of the folder in which the embeddings are stored.
+        model (tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject): The pre-trained 
+            embedding model used to generate embeddings.
+    
+    Returns:
+        dict: A dictionary with table (node) names as they key and its embeddings as the value.
+    """
+
+    embeddings_dict = {}
+
+    # Traverse through the dictionary and create emebddings dictionary 
+    for table, description in description_dict.items():
+        embeddings_filename = '{0}_embeddings.npy'.format(table)
+
+        # If embeddings file for a particular table exists, load the embeddings from file
+        # If embeddings file does not exist for a particular table, create embeddings and save it in a file
+        if is_file_in_subfolder(embeddings_folder_name, embeddings_filename):
+            embeddings = load_embeddings_from_file(embeddings_folder_name, embeddings_filename)
+        else:
+            embeddings = create_string_embeddings(description, model)
+            save_embeddings_to_file(embeddings, folder=embeddings_folder_name, filename=embeddings_filename)
+
+        embeddings_dict[table] = embeddings
+    return embeddings_dict
+    
