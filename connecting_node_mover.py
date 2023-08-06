@@ -21,8 +21,8 @@ def compute_similarity_between_node_and_node_group(node, node_group, embeddings_
     return calculate_similarity_between_embeddings(node_embeddings, node_group_average_embeddings)
 
 
-def enriched_community_detector(partition, nodes_by_community, community_connecting_nodes_dict, embeddings_dict):
-    """Detect natural language-enriched communities and nodes using a specified model.
+def move_connecting_nodes(partition, nodes_by_community, community_connecting_nodes_dict, embeddings_dict):
+    """ Move connecting nodes to a more similar community 
 
     Args:
         partition (dict): A dictionary where keys are nodes and values are the corresponding community IDs. 
@@ -31,8 +31,7 @@ def enriched_community_detector(partition, nodes_by_community, community_connect
         community_connecting_nodes_dict (dict): A dictionary where keys are tuples connecting two values representing neighboring 
             communities. The values are the set of nodes connecting the two communities represented by the tuple. The set contains
             either 0 or 1 item.
-        embedding_model (tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject): The pre-trained 
-            embedding model used to generate embeddings.
+        embeddings_dict (dict): A dictionary with table (node) name as the key and the embeddings of its descriptions as the value.
 
     Returns:
         dict: A dictionary where keys are connecting nodes and values are the ID of the community in which it belongs to after
