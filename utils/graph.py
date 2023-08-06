@@ -147,7 +147,7 @@ def get_edges(foreign_key_relation_list):
     return (parent_node, child_node)
 
 
-def draw_graph(G, partition, title):
+def draw_graph(G, partition, title, color_map):
     """
     Draws and displays a graph with nodes colored based on the provided partition.
 
@@ -171,11 +171,11 @@ def draw_graph(G, partition, title):
 
     node_colors = [partition[node] for node in G.nodes()]
 
-    node_labels = {node: f"Community {partition[node]}" for node in G.nodes()}
+    node_labels = {node: str(node) for node in G.nodes()} 
 
-    # Draw nodes with community colors
-    node_cmap = plt.cm.get_cmap('viridis', max(node_colors) + 1)
-    node_colors_rgb = [node_cmap(color) for color in node_colors]
+    # Use color map - Options e.g., Pastel1, tab20c, viridis
+    color_map = plt.cm.get_cmap(color_map, max(node_colors) + 1)
+    node_colors_rgb = [color_map(color) for color in node_colors]
 
     # Draw the graph components
     nx.draw_networkx_nodes(G, pos, node_color=node_colors_rgb, node_size=300)
@@ -185,7 +185,7 @@ def draw_graph(G, partition, title):
     # Create a custom legend using the same colors as node colors
     legend_labels = {community: f"Community {community}" for community in set(partition.values())}
     legend_handles = [plt.Line2D([0], [0], marker='o', color='w', label=label, markersize=10,
-                                markerfacecolor=node_cmap(community))
+                                markerfacecolor=color_map(community))
                     for community, label in legend_labels.items()]
 
     plt.legend(handles=legend_handles)
