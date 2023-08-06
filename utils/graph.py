@@ -1,15 +1,16 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from utils.general import get_word_between_strings
+from utils.general import get_word_between_strings, find_value_in_list
+
 
 def initialize_graph(nodes, edges, directed=False):
     """Intialize a Networkx graph
 
     Args:
         nodes (list): A list of nodes representating the tables in a database.
-        edges (list): A list of tuples representing edges which represent the foreign key relationship between two nodes.
-                    Each tuple should contain two node identifiers.A list of edges.
+        edges (list): A list of tuples where each tuple represents an edge between two nodes.
+            Each tuple should contain exactly two elements - the source node and the target node. 
         directed (bool):  If True, the graph is directed; if False, the graph is undirected.
                           Defaults to False.
 
@@ -22,6 +23,7 @@ def initialize_graph(nodes, edges, directed=False):
     G.add_nodes_from(nodes)
     G.add_edges_from(edges)
     return G
+
 
 def get_nodes_in_community(partition, community_id):
     """Get nodes belonging to a specific community.
@@ -36,6 +38,7 @@ def get_nodes_in_community(partition, community_id):
 
     return [node for node, comm_id in partition.items() if comm_id == community_id]
 
+
 def group_nodes_by_community(partition):
     """Group nodes based on the community partition.
 
@@ -44,6 +47,19 @@ def group_nodes_by_community(partition):
 
     Returns:
         dict: A dictionary where keys are community IDs and values are lists of nodes belonging to each community.
+
+    Example:
+        partition = {
+            'vbrk': 0, 'bkpf': 0, 'likp': 1, 'lips': 1, 'bseg': 0, 'vbak': 3, 
+            'vbap': 1, 'cdhdr': 2, 'nast': 3, 'cdpos': 2, 'vbfa': 1, 'vbrp': 0
+        }
+
+        Returns {
+            0: ['vbrk', 'bkpf', 'bseg', 'vbrp'], 
+            1: ['likp', 'lips', 'vbap', 'vbfa'], 
+            2: ['cdhdr', 'cdpos'],
+            3: ['vbak', 'nast']
+        }
     """
 
     community_nodes = {}
@@ -52,7 +68,8 @@ def group_nodes_by_community(partition):
         community_nodes.setdefault(community_id, []).append(node)
     return community_nodes
 
-def find_connecting_nodes(graph, nodes_by_community):
+
+def find_communities_connecting_nodes(graph, nodes_by_community):
     """Find nodes that connect a community to nodes outside the community.
 
     Parameters:
@@ -60,8 +77,26 @@ def find_connecting_nodes(graph, nodes_by_community):
         nodes_by_community (list): A list of nodes representing a community within the graph.
 
     Returns:
-        list: A list of tuples representing the nodes that connect the specified community to nodes outside the community.
+        dict: A dictionary in which the keys are the tuples representing the communities that are 
+            connected by the nodes, which are the values in the dictionary.
+
+    Example:
+        nodes_by_community =  {
+            0: ['vbrk', 'bkpf', 'bseg', 'vbrp'], 
+            1: ['likp', 'lips', 'vbap', 'vbfa'], 
+            2: ['cdhdr', 'cdpos'],
+            3: ['vbak', 'nast']
+        }
+
+        Returns {
+            (0, 1): {'vbfa'}, (0, 3): set(), (0, 2): set(), (1, 0): {'vbrp'}, 
+            (1, 3): {'vbak'}, (1, 2): set(), (3, 0): set(), (3, 1): {'vbap'}, 
+            (3, 2): set(), (2, 0): set(), (2, 1): set(), (2, 3): set()
+        }
+            Here, communities with IDs 0 and 1 are connected by the node 'vbfa.' 
+            Communities 0 and 3 are not connected with each other.
     """
+
     connecting_nodes = {}
     for c1 in nodes_by_community:
         for c2 in nodes_by_community:
@@ -73,6 +108,7 @@ def find_connecting_nodes(graph, nodes_by_community):
                     if intersecting_node:
                         connecting_nodes[(c1, c2)].update(intersecting_node)
     return connecting_nodes
+
 
 def _get_parent_node(foreign_key_relation_list):
     """ Extract the name of the parent node 
@@ -92,6 +128,7 @@ def _get_parent_node(foreign_key_relation_list):
     end_str = '('
     return get_word_between_strings(foreign_key_relation_list[2], start_str, end_str).strip()
 
+
 def get_edges(foreign_key_relation_list):
     """ Get the nodes representing the two ends of an edge
 
@@ -108,6 +145,7 @@ def get_edges(foreign_key_relation_list):
     child_node = foreign_key_relation_list[0]
     parent_node = _get_parent_node(foreign_key_relation_list)
     return (parent_node, child_node)
+
 
 def draw_graph(G, partition, title):
     """
@@ -135,6 +173,7 @@ def draw_graph(G, partition, title):
     for node in G.nodes():
         community_id = partition[node]
         node_color = plt.cm.tab20(community_id)
+        
         nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=node_color, node_size=200, label=f"Community {community_id}")
 
     # Draw edges
@@ -148,95 +187,147 @@ def draw_graph(G, partition, title):
     plt.axis('off')
     plt.show()
 
-def _insert_into_list(lst, target_value, new_value, position):
-    """Insert a new value into the given list before or after a specified target value, depending on the value of position.
+
+def get_relevant_edges(community_node_group, all_edges):
+    """ Get relevant edges from the full edge list based on the nodes in a community
 
     Args:
-        lst (list): The list in which the new value will be inserted.
-        target_value (str): The value after which the new value should be inserted.
-        new_value (str): The value to be inserted into the list.
-        position (str): The position where the new value should be inserted. 
-            It has two possible values 'before' the target value or 'after the target value.
+        community_node_group (list): A list of nodes in a commmunity
+        all_edges (list): A list of tuples where each tuple represents an edge between two nodes.
+            Each tuple should contain exactly two elements - the source node and the target node. 
 
     Returns:
-        list: A modified list with the new value inserted before or after the target value.
-    """
-    try:
-        index = lst.index(target_value)
-        if position == 'before':
-            lst.insert(index, new_value)
-        elif position == 'after':
-            lst.insert(index + 1, new_value)
-        else:
-            raise ValueError('Proper position is not provided.')
-    except ValueError:
-        print("Target value not found in the list.")
-    
-    return lst
+        list: A list of tuples representing the source and the target nodes of the edges.
+            The source and the target nodes are both must be in the same community.
 
-def _check_value_in_lists(value, list1, list2):
-    """Find if a value is in either of the two lists.
-
-    This function takes a value and two lists as parameters, and it searches for the value in both lists. 
-    If the value is found in the first list, 0 is returned. 
-    If the value is found in the second list, 1 is returned.
-    If the value is not found in either list, -1 is returned. 
-
-    Args:
-        value (any): The value to search for in the lists.
-        list1 (list): The first list to search in.
-        list2 (list): The second list to search in.
-
-    Returns:
-        int: A value representing which list is the given value is found or -1 if the value is not found in either list.
-    """
-    
-    return 0 if value in list1 else (1 if value in list2 else -1)
-
-def get_tree_branches(connecting_node, edges):
-    """Divide the connecting nodes into left and right branches of a tree with the connecting node as the root
-
-    Args:
-        connecting_nodes (str): The node that connects the two branches
-        edges (list): A list of tuples representing the source node and target node of an edge
-    
-    Returns:
-        list, list: The left and right branches of a tree
+    Example:
+        community_node_group = ['vbrk', 'bkpf', 'bseg', 'vbrp']
+        Returns [('vbrk', 'bkpf'), ('bkpf', 'bseg'), ('vbrk', 'vbrp')]
     """
 
-    left_branch = []
-    right_branch = []
-    for i in edges:
+    relevant_edges = []
+    for i in all_edges:
         source_node = i[0]
         target_node = i[1]
 
-        # If source node is the same as connecting node, append the target node to the left branch if it is empty.
-        # If the left branch is not empty, append the target node to the right branch, if it is empty.
-        if source_node == connecting_node:
-            if len(left_branch) == 0:
-                left_branch.append(target_node)
-            else:
-                if len(right_branch) == 0:
-                    right_branch.append(target_node)
-        else:
-            # Identify which branch are the source node and target node in
-            source_node_branch = _check_value_in_lists(source_node, left_branch, right_branch)
-            target_node_branch = _check_value_in_lists(target_node, left_branch, right_branch)
+        if source_node in community_node_group and target_node in community_node_group:
+            relevant_edges.append(i)
+    return relevant_edges
 
-            match source_node_branch:
-                case 0:
-                    left_branch = _insert_into_list(left_branch, source_node, target_node, position='before')
-                case 1:
-                    right_branch = _insert_into_list(right_branch, source_node, target_node, position='after')
-                case -1:
-                    pass
 
-            match target_node_branch:
-                case 0:
-                    left_branch = _insert_into_list(left_branch, target_node, source_node, position='before')
-                case 1:
-                    right_branch = _insert_into_list(right_branch, target_node, source_node, position='after')
-                case -1:
-                    pass
+def _get_non_common_nodes(nodes, source_nodes, target_nodes):
+    """ Get the nodes that are only in the source nodes but not in the target nodes.
 
-    return left_branch, right_branch
+    Args:
+        nodes (list): List of all nodes.
+        source_nodes (list): List of source nodes.
+        target_nodes (list): List of target nodes.
+
+    Returns:
+        list: A list containing the nodes that are only in the source nodes but not in the target nodes.
+    """
+    
+    return [node for node in nodes if node in source_nodes and node not in target_nodes]
+
+
+def find_central_node(nodes, source_nodes, target_nodes, graph, centrality_measure='betweenness'):
+    """ Identify the node that could be the central node in a given list of nodes.
+    
+    Given a list of nodes, check whether the nodes in the list are both source node and target node of edges.
+    The central node is that node, which is only found in the list of source nodes as it is the main table without any foreign key.
+
+    Args:
+        nodes (list): A list of all nodes.
+        source_nodes (list): A list of source nodes.
+        target_nodes (list): A list of target nodes.
+        graph (networkx.DiGraph or networkx.Graph): The graph in which centrality is calculated
+        centrality_measure (str, optional): The measure of centrality to be used. Defaults to be the betweenness centrality measure.
+
+    Returns:
+        str: The node that is the central among the nodes in a given list of nodes.
+    """
+    
+    # Identify the nodes that are only in the source nodes but not in the target nodes.
+    common_nodes = _get_non_common_nodes(nodes, source_nodes, target_nodes)
+
+    # If there is only one non common node, then that is the central node.
+    # Otherwise, identify the central node using the centrality measure.
+    if len(common_nodes) == 1:
+        return common_nodes[0]
+    else:
+        if centrality_measure == 'degree':
+            centrality = nx.degree_centrality(graph)
+        elif centrality_measure == 'betweenness':
+            centrality = nx.betweenness_centrality(graph)
+        elif centrality_measure == 'eigenvector':
+            centrality = nx.eigenvector_centrality(graph)
+
+        central_node = max(centrality, key=centrality.get)
+        return central_node
+  
+
+def arrange_nodes_in_series(edges):
+    """ Get the series chain from given list of tuples representing the edge between two nodes.
+
+    This function takes a list of edges and arranges the nodes in an appropriate order
+    to maintain the sequence defined by the edges. Each edge in the list is a tuple
+    representing a connection between two nodes. The ordering depends on the edges 
+    between the nodes.
+
+    Args:
+        edges (list of tuple): A list of tuples where each tuple represents an edge between two nodes. 
+            Each tuple should contain exactly two elements - the source node and the target node. 
+
+    Returns:
+        list: A list of nodes arranged in the order defined by the given edges.
+
+    Example:
+        edges = [('vbak', 'nast'), ('vbak', 'vbap'), ('vbfa', 'vbap')]
+        Returns ['vbfa', 'vbap', 'vbak', 'nast']
+        Here, vbak is the parent node of nast and vbap nodes. vbfa is the parent of vbap node.
+        So, vbak -> nast, vbak -> vbap, vbfa -> vbap.
+        When written in a series: vbfa -> vbap <- vbak -> nast. Therefore, that is the the return series.
+    """
+    
+    # Identify the unique nodes from the edges
+    unique_nodes = set(node for tupl in edges for node in tupl)
+
+    temp_list = []
+    final_list = []
+
+    # Loop until the final list has all the unique nodes
+    while len(final_list) != len(unique_nodes):
+        for tupl in edges:
+            source_node = tupl[0]
+            target_node = tupl[1]
+
+            # Check whether the source node or the target node is in the final list
+            existing_node_in_final_list = find_value_in_list(source_node, target_node, final_list)
+
+            # Identify the node of the tuple that is not already in the final list
+            node_not_in_final_list = target_node if existing_node_in_final_list == source_node else source_node if existing_node_in_final_list == target_node else None
+    
+            # In the first run, add the source node and target node to the final list already as the final list is empty
+            if len(final_list) == 0:
+                final_list.extend([source_node, target_node])
+
+            if existing_node_in_final_list:
+                existing_node_index = final_list.index(existing_node_in_final_list)
+
+                # If existing node is not in the first position in the final list, then append the node that is still not in the final list to the end of the list
+                # E.g., if existing node = b, another node = c and final list = [a, b], then the final list becomes [a, b, c]
+                # If existing node is in the first position in the final list, then insert the node that is still not in the final list to the start of the list
+                # E.g., if existing node = a, another node = c and final list = [a, b], then the final list becomes [c, a, b]
+                if existing_node_index > 0:
+                    final_list.append(node_not_in_final_list)
+                elif existing_node_index == 0:
+                    final_list.insert(0, node_not_in_final_list)
+
+            # If both source node and target node are not in the final list, then add the tuple to a temporary list for another pass through the while-loop
+            if source_node not in final_list or target_node not in final_list:
+                temp_list.append(tupl)
+            
+            # Change edges to temp_list to terminate the while-loop after a certain number of iterations
+            edges = temp_list
+    
+    return final_list
