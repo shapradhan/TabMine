@@ -1,5 +1,5 @@
 from utils.embeddings import calculate_similarity_between_embeddings, compute_average_embedding
-from utils.general import find_key_by_value, get_multiple_occuring_values
+from utils.general import get_key_by_value, get_multiple_occuring_values
 from utils.graph import get_nodes_in_community
 
 
@@ -88,9 +88,9 @@ def enriched_community_detector(partition, nodes_by_community, community_connect
         community_to_move_to = -1
         if similarity_scores:
             if similarity_scores[0] > similarity_scores[1]:
-                community_to_move_to = find_key_by_value(nodes_by_community, neighboring_node_groups[0])
+                community_to_move_to = get_key_by_value(nodes_by_community, neighboring_node_groups[0])
             else:
-                community_to_move_to = find_key_by_value(nodes_by_community, neighboring_node_groups[1])
+                community_to_move_to = get_key_by_value(nodes_by_community, neighboring_node_groups[1])
                 
             partition[connecting_node] = community_to_move_to
 

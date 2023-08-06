@@ -91,3 +91,18 @@ def get_multiple_occuring_values(lst):
 
     return values_with_multiple_occurrences
 
+
+def get_key_by_value(dictionary, value):
+    """ Get the key in the given dictionary based on the specified value.
+    Args:
+        dictionary (dict): The dictionary to search in.
+        value: The value to search for in the dictionary.
+
+    Returns:
+        The key corresponding to the given value, if found; otherwise, returns None.
+    """
+    
+    for key, val in dictionary.items():
+        if val == value:
+            return key
+    return None 
