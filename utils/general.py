@@ -1,5 +1,6 @@
 import os
 import re
+from collections import Counter
 
 
 def get_word_between_strings(text, start_str, end_str):
@@ -67,7 +68,26 @@ def create_dict_from_df(df, key_col, value_col):
     dict_data_records = df.to_dict(orient='records')
     return {item[key_col]: item[value_col] for item in dict_data_records}
 
+
+def get_multiple_occuring_values(lst):
+    """ Find and return values that occur more than once in a list.
+
+    Args:
+        lst (list): The input list containing values to be analyzed.
+
     Returns:
-        bool: True if all values are higher than the threshold, False otherwise.
+        list: A list of values that occur more than once in the input list.
+
+    Example:
+        lst = [1, 2, 2, 3, 4, 4, 4, 5]
+        Returns [2, 4]
     """
-    return all(value > threshold for value in lst) 
+    
+    # Count occurrences of each element
+    element_counts = Counter(lst)
+
+    # Get values that occur multiple times
+    values_with_multiple_occurrences = [value for value, count in element_counts.items() if count > 1]
+
+    return values_with_multiple_occurrences
+
