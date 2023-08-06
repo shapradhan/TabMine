@@ -21,14 +21,16 @@ def compute_similarity_between_node_and_node_group(node, node_group, embeddings_
     return calculate_similarity_between_embeddings(node_embeddings, node_group_average_embeddings)
 
 
-def enriched_community_detector(df, partition, community_connecting_nodes_list, embedding_model, nodes_by_community, embeddings_dict, embeddings_folder_name):
+def enriched_community_detector(partition, nodes_by_community, community_connecting_nodes_dict, embeddings_dict):
     """Detect natural language-enriched communities and nodes using a specified model.
 
     Args:
-        df (pandas.DataFrame): The DataFrame containing tables and descriptions.
         partition (dict): A dictionary where keys are nodes and values are the corresponding community IDs. 
-                          The communities are numbered from 0 to number of communities.
-        community_connecting_nodes_list (list): A list of tuples representing nodes that are connected with each other.
+            The communities are numbered from 0 to number of communities.
+        nodes_by_community (dict): A dictionary where keys are the community IDs and values are the list of nodes in respective communities.
+        community_connecting_nodes_dict (dict): A dictionary where keys are tuples connecting two values representing neighboring 
+            communities. The values are the set of nodes connecting the two communities represented by the tuple. The set contains
+            either 0 or 1 item.
         embedding_model (tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject): The pre-trained 
             embedding model used to generate embeddings.
 
@@ -47,9 +49,9 @@ def enriched_community_detector(df, partition, community_connecting_nodes_list, 
         }
     """
 
-    # Identify the nodes connecting two communities from community_connecting_nodes_list
+    # Identify the nodes connecting two communities from community_connecting_nodes_dict
     # For above example, nodes_connecting_two_communities = ['vbfa', 'vbrp', 'vbak', 'vbap']
-    nodes_connecting_two_communities = [item for subset in community_connecting_nodes_list.values() for item in subset]
+    nodes_connecting_two_communities = [item for subset in community_connecting_nodes_dict.values() for item in subset]
 
     # If there is connecting more than two communities, identify such nodes
     # E.g., if nodes_connecting_two_communities = ['vbfa', 'vbrp', 'vbak', 'vbfa'],
@@ -59,18 +61,18 @@ def enriched_community_detector(df, partition, community_connecting_nodes_list, 
     # If there is a node that connects more than two communities, then find all neighboring communities of that node
     if nodes_connecting_multiple_communities:
         neighboring_node_groups = []
-        for key, val in community_connecting_nodes_list.items():
+        for key, val in community_connecting_nodes_dict.items():
             if val:
                 connecting_node = list(val)[0]  # Example: val = {'vbfa'}. So, connecting_node becomes 'vbfa'
 
                 # If connecting node is in nodes_connecting_multiple_communities, get the neighboring nodes.
                 # Append the nodes of all neighboring communities to a a list.
-                # Remove the reference of the node being a node connecting two communities from community_connecting_nodes_list.
+                # Remove the reference of the node being a node connecting two communities from community_connecting_nodes_dict.
                 # The removal is done so that the algorithm would not have to traverse through this node again.
                 if connecting_node in nodes_connecting_multiple_communities:
                     neighboring_nodes_original = get_nodes_in_community(partition, key[0])
                     neighboring_node_groups.append(neighboring_nodes_original)
-                    community_connecting_nodes_list[key] = set()
+                    community_connecting_nodes_dict[key] = set()
         
         similarity_scores = []    
         
@@ -93,7 +95,7 @@ def enriched_community_detector(df, partition, community_connecting_nodes_list, 
             partition[connecting_node] = community_to_move_to
 
     # Iterate through rest of the nodes connecting the communities
-    for key, val in community_connecting_nodes_list.items():
+    for key, val in community_connecting_nodes_dict.items():
         if val:
             connecting_node = list(val)[0]  # Example: val = {'vbfa'}. So, connecting_node becomes 'vbfa'
 
