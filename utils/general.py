@@ -106,3 +106,19 @@ def get_key_by_value(dictionary, value):
         if val == value:
             return key
     return None 
+
+
+def check_value_in_list(value1, value2, lst):
+    """ Check the presence of value1 or value2 in the given list.
+
+    Args:
+        value1: The first value to search for.
+        value2: The second value to search for.
+        lst (list): The list to search in.
+
+    Returns:
+        str or None: value1 if it is present in the given list or value2 if it is present in the given list.
+            None if neither of the given values are present in the given list.
+    """
+
+    return value1 if value1 in lst else (value2 if value2 in lst else None)

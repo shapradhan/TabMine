@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 
-from utils.general import get_word_between_strings, find_value_in_list
+from utils.general import get_word_between_strings, check_value_in_list
 
 
 def initialize_graph(nodes, edges, directed=False):
@@ -302,7 +302,7 @@ def arrange_nodes_in_series(edges):
             target_node = tupl[1]
 
             # Check whether the source node or the target node is in the final list
-            existing_node_in_final_list = find_value_in_list(source_node, target_node, final_list)
+            existing_node_in_final_list = check_value_in_list(source_node, target_node, final_list)
 
             # Identify the node of the tuple that is not already in the final list
             node_not_in_final_list = target_node if existing_node_in_final_list == source_node else source_node if existing_node_in_final_list == target_node else None
