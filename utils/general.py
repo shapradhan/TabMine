@@ -21,38 +21,38 @@ def get_word_between_strings(text, start_str, end_str):
         return match.group(1)
     return None
 
-def make_subfolder(subfolder_name):
-    """Create a new subfolder with the specified name within the current directory.
+
+def make_subdirectory(subdirectory_name):
+    """Create a new sub directory with the specified name within the current directory.
 
     Args:
-    subfolder_name (str): The name of the subfolder to be created.
+    subdirectory_name (str): The name of the subdirectory to be created.
 
     Returns:
-        bool: True if a subfolder is successfully created, False otherwise.
+        bool: True if a sub directory is successfully created, Otherwise, False.
     """
 
-    if not os.path.exists(subfolder_name):
-        os.makedirs(subfolder_name)
+    if not os.path.exists(subdirectory_name):
+        os.makedirs(subdirectory_name)
         return True
     else:
         return False
 
-def is_file_in_subfolder(subfolder_name, filename):
-    """Check if a file with a given filename is in a subfolder within the current direction,
+
+def is_file_in_subdirectory(subdirectory_name, filename):
+    """Check if a file with a given filename is in a sub directory within the current direction,
 
     Args:
-        subfolder_name (str): The name of the subfolder.
-        filename (str): The name of the file that needs to be checked in the subfolder.
+        subdirectory_name (str): The name of the sub directory.
+        filename (str): The name of the file that needs to be checked in the sub directory.
     
     Returns:
-        bool: True if the file is in the subfolder, False otherwise.
+        bool: True if the file is in the sub directory, Otherwise, False.
     """
-    file_path = os.path.join(os.getcwd(), subfolder_name, filename)
+    file_path = os.path.join(os.getcwd(), subdirectory_name, filename)
     return os.path.isfile(file_path)
 
 
-def all_values_higher_than(lst, threshold):
-    """Check if all values in a list are higher than a certain threshold.
 def create_dict_from_df(df, key_col, value_col):
     """ Create a dictionary from a given DataFrame with given columns as keys and values.
 
