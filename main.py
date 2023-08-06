@@ -127,5 +127,5 @@ if __name__ == '__main__':
 
   new_G = initialize_graph(nodes, edges, directed=False)
 
-  draw_graph(G, partition, 'Original Communities - Undirected - Louvain')
-  draw_graph(new_G, final_partition, 'Modified Communities - Undirected - Louvain')
+  draw_graph(G, partition, title='Original Communities - Undirected - Louvain', color_map='Pastel1')
+  draw_graph(new_G, final_partition, title='Modified Communities - Undirected - Louvain', color_map='Pastel1')
