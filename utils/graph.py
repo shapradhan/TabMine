@@ -167,23 +167,30 @@ def draw_graph(G, partition, title):
     """
      
     pos = nx.spring_layout(G)
-
     plt.figure(figsize=(10, 6))
 
-    for node in G.nodes():
-        community_id = partition[node]
-        node_color = plt.cm.tab20(community_id)
-        
-        nx.draw_networkx_nodes(G, pos, nodelist=[node], node_color=node_color, node_size=200, label=f"Community {community_id}")
+    node_colors = [partition[node] for node in G.nodes()]
 
-    # Draw edges
+    node_labels = {node: f"Community {partition[node]}" for node in G.nodes()}
+
+    # Draw nodes with community colors
+    node_cmap = plt.cm.get_cmap('viridis', max(node_colors) + 1)
+    node_colors_rgb = [node_cmap(color) for color in node_colors]
+
+    # Draw the graph components
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors_rgb, node_size=300)
     nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5)
+    nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=10, font_color='black')
 
-    # Draw node labels
-    nx.draw_networkx_labels(G, pos, font_size=10, font_color='black')
+    # Create a custom legend using the same colors as node colors
+    legend_labels = {community: f"Community {community}" for community in set(partition.values())}
+    legend_handles = [plt.Line2D([0], [0], marker='o', color='w', label=label, markersize=10,
+                                markerfacecolor=node_cmap(community))
+                    for community, label in legend_labels.items()]
+
+    plt.legend(handles=legend_handles)
 
     plt.title(title)
-    plt.legend()
     plt.axis('off')
     plt.show()
 
