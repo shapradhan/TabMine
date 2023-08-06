@@ -1,45 +1,34 @@
-from utils.general import is_file_in_subfolder
+from utils.embeddings import calculate_similarity_between_embeddings, compute_average_embedding
+from utils.general import find_key_by_value, get_multiple_occuring_values
 from utils.graph import get_nodes_in_community
-from utils.data_dictionary import get_table_descriptions
-from utils.embeddings import load_embeddings_from_file, create_string_embeddings, save_embeddings_to_file, \
-    compute_average_embedding, calculate_similarity_between_embeddings
 
-def get_embeddings_list(description_dict, embedding_model, embeddings_folder_name):
-    """
-    Generate embeddings for a list of descriptions using a specified model.
+
+def compute_similarity_between_node_and_node_group(node, node_group, embeddings_dict):
+    """ Compute similarity score between a given node and a node group.
 
     Args:
-        description_dict (dict): A dictionary where keys are tables and values are descriptions.
-        embedding_model (tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject): The pre-trained 
-            embedding model used to generate embeddings.
-        embeddings_folder_name (str)
-
+        node (str): The given node for which the similarity score has to be computed.
+        node_group (list): A list of nodes.
+        embeddings_dict (dict): A dictionary with table (node) name as the key and the embeddings of its descriptions as the value.
+    
     Returns:
-        list: A list of embeddings, each corresponding to a description in the input dictionary.
+        float: The similarity between the given node and the node group
     """
+    
+    node_embeddings = embeddings_dict[node]
+    node_group_embeddings = [embeddings_dict[node] for node in node_group]
+    node_group_average_embeddings = compute_average_embedding(node_group_embeddings)
+    return calculate_similarity_between_embeddings(node_embeddings, node_group_average_embeddings)
 
-    embeddings_list = []
-    for table, description in description_dict.items():
-        embeddings_filename = embeddings_filename = '{0}_embeddings.npy'.format(table)
 
-        if is_file_in_subfolder(embeddings_folder_name, embeddings_filename):
-            embeddings = load_embeddings_from_file(embeddings_folder_name, embeddings_filename)
-        else:
-            embeddings = create_string_embeddings(description, embedding_model)
-            save_embeddings_to_file(embeddings, folder=embeddings_folder_name, filename=embeddings_filename)
-
-        embeddings_list.append(embeddings)
-
-    return embeddings_list
-
-def enriched_community_detector(df, partition, connecting_nodes_list, embedding_model):
+def enriched_community_detector(df, partition, community_connecting_nodes_list, embedding_model, nodes_by_community, embeddings_dict, embeddings_folder_name):
     """Detect natural language-enriched communities and nodes using a specified model.
 
     Args:
         df (pandas.DataFrame): The DataFrame containing tables and descriptions.
         partition (dict): A dictionary where keys are nodes and values are the corresponding community IDs. 
                           The communities are numbered from 0 to number of communities.
-        connecting_nodes_list (list): A list of tuples representing nodes that are connected with each other.
+        community_connecting_nodes_list (list): A list of tuples representing nodes that are connected with each other.
         embedding_model (tensorflow.python.saved_model.load.Loader._recreate_base_user_object.<locals>._UserObject): The pre-trained 
             embedding model used to generate embeddings.
 
@@ -47,42 +36,79 @@ def enriched_community_detector(df, partition, connecting_nodes_list, embedding_
         dict: A dictionary where keys are connecting nodes and values are the ID of the community in which it belongs to after
             they have been moved, if necessary.
     
-    Raise:
+    Raises:
         ValueError: This error si raised if there is no description in the connecting nodes list item.
+
+    Example:
+        connecting_node_list = {
+            (1, 0): {'vbfa'}, (1, 3): set(), (1, 2): set(), (0, 1): {'vbrp'}, 
+            (0, 3): {'vbak'}, (0, 2): set(), (3, 1): set(), (3, 0): {'vbap'}, 
+            (3, 2): set(), (2, 1): set(), (2, 0): set(), (2, 3): set()
+        }
     """
 
-    EMBEDDINGS_FOLDER_NAME = 'embeddings'
-    for key, val in connecting_nodes_list.items():
-        if val:
-            # Find the connecting node
-            connecting_node = list(val)[0]
-            connecting_nodes_description = df.loc[df['tables'] == connecting_node, 'descriptions'].iloc[0]
+    # Identify the nodes connecting two communities from community_connecting_nodes_list
+    # For above example, nodes_connecting_two_communities = ['vbfa', 'vbrp', 'vbak', 'vbap']
+    nodes_connecting_two_communities = [item for subset in community_connecting_nodes_list.values() for item in subset]
 
-            # Get the neighboring nodes group sand current nodes group of the connecting node
+    # If there is connecting more than two communities, identify such nodes
+    # E.g., if nodes_connecting_two_communities = ['vbfa', 'vbrp', 'vbak', 'vbfa'],
+    # nodes_connecting_multiple_communities = ['vbfa']
+    nodes_connecting_multiple_communities = get_multiple_occuring_values(nodes_connecting_two_communities)
+
+    # If there is a node that connects more than two communities, then find all neighboring communities of that node
+    if nodes_connecting_multiple_communities:
+        neighboring_node_groups = []
+        for key, val in community_connecting_nodes_list.items():
+            if val:
+                connecting_node = list(val)[0]  # Example: val = {'vbfa'}. So, connecting_node becomes 'vbfa'
+
+                # If connecting node is in nodes_connecting_multiple_communities, get the neighboring nodes.
+                # Append the nodes of all neighboring communities to a a list.
+                # Remove the reference of the node being a node connecting two communities from community_connecting_nodes_list.
+                # The removal is done so that the algorithm would not have to traverse through this node again.
+                if connecting_node in nodes_connecting_multiple_communities:
+                    neighboring_nodes_original = get_nodes_in_community(partition, key[0])
+                    neighboring_node_groups.append(neighboring_nodes_original)
+                    community_connecting_nodes_list[key] = set()
+        
+        similarity_scores = []    
+        
+        # For each neighboring node group, compute the similarity between that group and the connecting node.
+        # Append the similarity scores to a list.
+        for neighboring_nodes in neighboring_node_groups:
+            similarity_score = compute_similarity_between_node_and_node_group(connecting_node, neighboring_nodes, embeddings_dict)
+            similarity_scores.append(similarity_score)
+
+        # Determine which community to move the connecting node to.
+        # This is done by comparing the similarity scores with each other.
+        # Here, an assumption is that connecting node only connects at most three communities - its own and two neighboring communities.
+        community_to_move_to = -1
+        if similarity_scores:
+            if similarity_scores[0] > similarity_scores[1]:
+                community_to_move_to = find_key_by_value(nodes_by_community, neighboring_node_groups[0])
+            else:
+                community_to_move_to = find_key_by_value(nodes_by_community, neighboring_node_groups[1])
+                
+            partition[connecting_node] = community_to_move_to
+
+    # Iterate through rest of the nodes connecting the communities
+    for key, val in community_connecting_nodes_list.items():
+        if val:
+            connecting_node = list(val)[0]  # Example: val = {'vbfa'}. So, connecting_node becomes 'vbfa'
+
+            # Get the neighboring nodes group and current nodes group of the connecting node
             neighboring_nodes_original = get_nodes_in_community(partition, key[0])
             current_nodes_original = get_nodes_in_community(partition, key[1])
-            
+        
             # Current node group without the connecting node
             current_nodes_modified = current_nodes_original[:]    
             current_nodes_modified.remove(connecting_node)
-
-            # Get descriptions of the nodes
-            neighboring_nodes_original_descriptions = get_table_descriptions(df, neighboring_nodes_original)
-            current_nodes_modified_descriptions = get_table_descriptions(df, current_nodes_original)
-
-            # Create embeddings for each node group and the connecting node
-            neighboring_nodes_original_embeddings = get_embeddings_list(neighboring_nodes_original_descriptions, embedding_model, EMBEDDINGS_FOLDER_NAME)
-            current_nodes_modified_embeddings = get_embeddings_list(current_nodes_modified_descriptions, embedding_model ,EMBEDDINGS_FOLDER_NAME)
-            connecting_node_embeddings = create_string_embeddings(connecting_nodes_description, embedding_model)
-     
-            # Compute the average embeddings for each node group
-            neighboring_nodes_original_average_embeddings = compute_average_embedding(neighboring_nodes_original_embeddings)
-            current_nodes_modified_average_embeddings = compute_average_embedding(current_nodes_modified_embeddings)
-
-            # Calculat the similarity score between the connecting node and the node groups
-            similarity_score_with_neighboring_nodes = calculate_similarity_between_embeddings(connecting_node_embeddings, neighboring_nodes_original_average_embeddings)
-            similarity_score_with_current_nodes = calculate_similarity_between_embeddings(connecting_node_embeddings, current_nodes_modified_average_embeddings)
-
+            
+            # Compute the similarity score between the connecting node and its neighboring node group and its own node group without itself
+            similarity_score_with_neighboring_nodes = compute_similarity_between_node_and_node_group(connecting_node, neighboring_nodes_original, embeddings_dict)
+            similarity_score_with_current_nodes = compute_similarity_between_node_and_node_group(connecting_node, current_nodes_modified, embeddings_dict)
+            
             # If the similarity score of the conencting node is higher with the neighboring node, move the node to that group
             # Else keep the node to the current group
             if similarity_score_with_neighboring_nodes > similarity_score_with_current_nodes:
