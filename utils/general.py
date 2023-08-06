@@ -52,10 +52,20 @@ def is_file_in_subfolder(subfolder_name, filename):
 
 def all_values_higher_than(lst, threshold):
     """Check if all values in a list are higher than a certain threshold.
+def create_dict_from_df(df, key_col, value_col):
+    """ Create a dictionary from a given DataFrame with given columns as keys and values.
 
     Args:
-        lst (list of int or float): The list containing numeric values to be checked.
-        threshold (int or float): The threshold value to compare against.
+        df (pandas.DataFrame): The DataFrame from which a dictionary has to be created.
+        key_col (str): The name of the column of the DataFrame that will be used as the dictionary key.
+        value_col (str): The name of the column of the DataFrame that will be used as the dictionary value.
+    
+    Returns:
+        dict: A dictionary containing values from the given DataFrame as keys and values.
+    """
+
+    dict_data_records = df.to_dict(orient='records')
+    return {item[key_col]: item[value_col] for item in dict_data_records}
 
     Returns:
         bool: True if all values are higher than the threshold, False otherwise.
