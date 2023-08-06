@@ -22,7 +22,7 @@ def compare_average_similarity_and_threshold(node1, node2, similarity_threshold,
     return True if similarity_score >= similarity_threshold else False
 
 
-def detect_communities_in_node_series(nodes, similarity_threshold, embeddings_dict):
+def detect_communities_in_node_series(nodes, embeddings_dict, similarity_threshold):
     """ Detect communities in a series chain of nodes.
 
     This function can be used after connecting nodes have been moved after the initial partion was identified.
