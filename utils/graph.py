@@ -402,3 +402,34 @@ def check_edge_connection_between_nodes(node1, node2, edges):
         if (source_node == node1 and target_node == node2) or (source_node == node2 and target_node == node1):
             return True
     return False
+
+def find_similar_nodes(node, nodes, edges, similarity_threshold, embeddings_dict):
+    """ Find similar nodes to a given node.
+
+    Args:
+        node (str): A node for which similar nodes have to be found.
+        nodes (list): A list of nodes.
+        edges (list): A list of tuples representing the nodes connecting an edge.
+        similarity_threshold (float): The similarity threshold value.
+        embeddings_dict (dict): A dictionary where the keys are the table (node) names and values the embeddings of the description.
+    
+    Returns:
+        list, list: Two lists containing similar and dissimilar nodes for a given node
+    """
+
+    similar_nodes = []
+    dissimilar_nodes = []
+    
+    for other_node in nodes:
+        if other_node != node:
+            sim_score = calculate_similarity_between_embeddings(embeddings_dict[node], embeddings_dict[other_node])
+            if sim_score >= similarity_threshold:
+                # Check if there is a direct connection between the two nodes via an edge.
+                if check_edge_connection_between_nodes(node, other_node, edges):
+                    similar_nodes.append(other_node)
+                else:
+                    dissimilar_nodes.append(other_node)
+            else:
+                dissimilar_nodes.append(other_node)
+    
+    return similar_nodes, dissimilar_nodes
