@@ -1,5 +1,5 @@
 from utils.embeddings import calculate_similarity_between_embeddings, compute_average_embedding
-from utils.general import get_key_by_value, get_multiple_occuring_values
+from utils.general import get_multiple_occuring_values
 from utils.graph import get_nodes_in_community
 
 
@@ -47,7 +47,7 @@ def move_connecting_nodes(partition, nodes_by_community, community_connecting_no
             (3, 2): set(), (2, 1): set(), (2, 0): set(), (2, 3): set()
         }
     """
-
+    #nodes_by_community = {0: ['ekkn', 'ekes', 'eket', 'ekbe', 'ekko', 'ekpo'], 4: ['eina', 'eine'], 3: ['mkpf', 'mseg'], 5: ['eord'], 1: ['bkpf', 'bseg', 'rbkp', 'rseg'], 2: ['eban', 'ebkn']}
     # Identify the nodes connecting two communities from community_connecting_nodes_dict
     # For above example, nodes_connecting_two_communities = ['vbfa', 'vbrp', 'vbak', 'vbap']
     nodes_connecting_two_communities = [item for subset in community_connecting_nodes_dict.values() for item in subset]
@@ -56,65 +56,79 @@ def move_connecting_nodes(partition, nodes_by_community, community_connecting_no
     # E.g., if nodes_connecting_two_communities = ['vbfa', 'vbrp', 'vbak', 'vbfa'],
     # nodes_connecting_multiple_communities = ['vbfa']
     nodes_connecting_multiple_communities = get_multiple_occuring_values(nodes_connecting_two_communities)
-
+   
     # If there is a node that connects more than two communities, then find all neighboring communities of that node
+    nodes_already_checked = []
     if nodes_connecting_multiple_communities:
-        neighboring_node_groups = []
-        for key, val in community_connecting_nodes_dict.items():
-            if val:
-                connecting_node = list(val)[0]  # Example: val = {'vbfa'}. So, connecting_node becomes 'vbfa'
+        for node in set(nodes_connecting_multiple_communities):
+            neighboring_community_nodes = {}
+            current_communityId = None
+            for edge, nodes in community_connecting_nodes_dict.items():
+                if nodes:
+                    nodes = list(nodes)
+                    if node in nodes:
+                        nodes_already_checked.append(node)
+                        neighboring_community_nodes[edge[0]] = get_nodes_in_community(partition, edge[0])
+                        current_communityId = edge[1]
+            
+            similarity_scores = {}
+            for community_id, node_group in neighboring_community_nodes.items():
+                sim_score = compute_similarity_between_node_and_node_group(node, node_group, embeddings_dict)
+                similarity_scores[community_id] = sim_score
 
-                # If connecting node is in nodes_connecting_multiple_communities, get the neighboring nodes.
-                # Append the nodes of all neighboring communities to a a list.
-                # Remove the reference of the node being a node connecting two communities from community_connecting_nodes_dict.
-                # The removal is done so that the algorithm would not have to traverse through this node again.
-                if connecting_node in nodes_connecting_multiple_communities:
-                    neighboring_nodes_original = get_nodes_in_community(partition, key[0])
-                    neighboring_node_groups.append(neighboring_nodes_original)
-                    community_connecting_nodes_dict[key] = set()
-        
-        similarity_scores = []    
-        
-        # For each neighboring node group, compute the similarity between that group and the connecting node.
-        # Append the similarity scores to a list.
-        for neighboring_nodes in neighboring_node_groups:
-            similarity_score = compute_similarity_between_node_and_node_group(connecting_node, neighboring_nodes, embeddings_dict)
-            similarity_scores.append(similarity_score)
+            current_community_nodes_original = get_nodes_in_community(partition, current_communityId)
+            current_community_nodes_modified = current_community_nodes_original[:]
+            current_community_nodes_modified.remove(node)
+            
+            intra_community_similarity = compute_similarity_between_node_and_node_group(node, current_community_nodes_modified, embeddings_dict)
+            
+            highest_similarity_score = intra_community_similarity
+            community_with_highest_similarity_score = current_communityId
+            for communityId, score in similarity_scores.items():
+                if score > highest_similarity_score:
+                    highest_similarity_score = score
+                    community_with_highest_similarity_score = communityId   
+                    
+            partition[node] = community_with_highest_similarity_score
 
-        # Determine which community to move the connecting node to.
-        # This is done by comparing the similarity scores with each other.
-        # Here, an assumption is that connecting node only connects at most three communities - its own and two neighboring communities.
-        community_to_move_to = -1
-        if similarity_scores:
-            if similarity_scores[0] > similarity_scores[1]:
-                community_to_move_to = get_key_by_value(nodes_by_community, neighboring_node_groups[0])
-            else:
-                community_to_move_to = get_key_by_value(nodes_by_community, neighboring_node_groups[1])
+        neighboring_community_nodes = {}
+        current_communityId = None
+        for edge, nodes in community_connecting_nodes_dict.items():
+            if nodes:
+                nodes = list(nodes)
+                for connecting_node in nodes:
+                    if connecting_node not in nodes_already_checked:
+                        neighboring_community_nodes = get_nodes_in_community(partition, edge[0])
+                        current_community_nodes_original = get_nodes_in_community(partition, edge[1])
+                        current_community_nodes_modified = current_community_nodes_original[:]
+                        current_community_nodes_modified.remove(connecting_node)
+
+                        intra_community_similarity = compute_similarity_between_node_and_node_group(connecting_node, current_community_nodes_modified, embeddings_dict)
+                        similarity_score_with_neighboring_community = compute_similarity_between_node_and_node_group(connecting_node, neighboring_community_nodes, embeddings_dict)
+                        
+                        if intra_community_similarity < similarity_score_with_neighboring_community:
+                            partition[connecting_node] = edge[0]
+    else:
+        for edge, nodes in community_connecting_nodes_dict.items():
+            if nodes:
+                nodes = list(nodes)
+                for connecting_node in nodes:
+                    # Get the neighboring nodes group and current nodes group of the connecting node
+                    neighboring_nodes_original = get_nodes_in_community(partition, edge[0])
+                    current_nodes_original = get_nodes_in_community(partition, edge[1])
                 
-            partition[connecting_node] = community_to_move_to
-
-    # Iterate through rest of the nodes connecting the communities
-    for key, val in community_connecting_nodes_dict.items():
-        if val:
-            connecting_node = list(val)[0]  # Example: val = {'vbfa'}. So, connecting_node becomes 'vbfa'
-
-            # Get the neighboring nodes group and current nodes group of the connecting node
-            neighboring_nodes_original = get_nodes_in_community(partition, key[0])
-            current_nodes_original = get_nodes_in_community(partition, key[1])
-        
-            # Current node group without the connecting node
-            current_nodes_modified = current_nodes_original[:]    
-            current_nodes_modified.remove(connecting_node)
-            
-            # Compute the similarity score between the connecting node and its neighboring node group and its own node group without itself
-            similarity_score_with_neighboring_nodes = compute_similarity_between_node_and_node_group(connecting_node, neighboring_nodes_original, embeddings_dict)
-            similarity_score_with_current_nodes = compute_similarity_between_node_and_node_group(connecting_node, current_nodes_modified, embeddings_dict)
-            
-            # If the similarity score of the conencting node is higher with the neighboring node, move the node to that group
-            # Else keep the node to the current group
-            if similarity_score_with_neighboring_nodes > similarity_score_with_current_nodes:
-                partition[connecting_node] = key[0]
-            else:
-                partition[connecting_node] = key[1]
-        
+                    # Current node group without the connecting node
+                    current_nodes_modified = current_nodes_original[:]    
+                    current_nodes_modified.remove(connecting_node)
+                    
+                    # Compute the similarity score between the connecting node and its neighboring node group and its own node group without itself
+                    similarity_score_with_neighboring_nodes = compute_similarity_between_node_and_node_group(connecting_node, neighboring_nodes_original, embeddings_dict)
+                    similarity_score_with_current_nodes = compute_similarity_between_node_and_node_group(connecting_node, current_nodes_modified, embeddings_dict)
+                    
+                    # If the similarity score of the conencting node is higher with the neighboring node, move the node to that group
+                    # Else keep the node to the current group
+                    if similarity_score_with_neighboring_nodes > similarity_score_with_current_nodes:
+                        partition[connecting_node] = edge[0]
+                    else:
+                        partition[connecting_node] = edge[1]
     return partition
