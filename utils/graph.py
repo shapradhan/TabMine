@@ -4,7 +4,7 @@ import networkx as nx
 from collections import Counter
 
 from utils.general import get_word_between_strings, check_value_in_list
-from utils.embeddings import calculate_similarity_between_embeddings, calculate_average_similarity_parallel
+from utils.embeddings import calculate_similarity_between_embeddings
 
 
 def initialize_graph(nodes, edges, directed=False):
