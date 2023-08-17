@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 import networkx as nx
 
+from collections import Counter
+
 from utils.general import get_word_between_strings, check_value_in_list
+from utils.embeddings import calculate_similarity_between_embeddings, calculate_average_similarity_parallel
 
 
 def initialize_graph(nodes, edges, directed=False):
@@ -147,7 +150,7 @@ def get_edges(foreign_key_relation_list):
     return (parent_node, child_node)
 
 
-def draw_graph(G, partition, title, color_map):
+def draw_graph(G, partition, title, labels=None, color_map=None):
     """
     Draws and displays a graph with nodes colored based on the provided partition.
 
@@ -183,7 +186,7 @@ def draw_graph(G, partition, title, color_map):
     nx.draw_networkx_labels(G, pos, labels=node_labels, font_size=10, font_color='black')
 
     # Create a custom legend using the same colors as node colors
-    legend_labels = {community: f"Community {community}" for community in set(partition.values())}
+    legend_labels = {community_id: label for community_id, label in set(labels.items())} if labels else {community: f"Community {community}" for community in set(partition.values())}
     legend_handles = [plt.Line2D([0], [0], marker='o', color='w', label=label, markersize=10,
                                 markerfacecolor=color_map(community))
                     for community, label in legend_labels.items()]
@@ -298,13 +301,13 @@ def arrange_nodes_in_series(edges):
     
     # Identify the unique nodes from the edges
     unique_nodes = set(node for tupl in edges for node in tupl)
-
     temp_list = []
     final_list = []
 
     # Loop until the final list has all the unique nodes
     while len(final_list) != len(unique_nodes):
         for tupl in edges:
+            print('checking tuple {0}'.format(tupl))
             source_node = tupl[0]
             target_node = tupl[1]
 
@@ -333,10 +336,9 @@ def arrange_nodes_in_series(edges):
             # If both source node and target node are not in the final list, then add the tuple to a temporary list for another pass through the while-loop
             if source_node not in final_list or target_node not in final_list:
                 temp_list.append(tupl)
-            
+                
             # Change edges to temp_list to terminate the while-loop after a certain number of iterations
             edges = temp_list
-    
     return final_list
 
 
@@ -358,3 +360,27 @@ def convert_communities_list_to_partition(communities):
             partition[node] = index
 
     return partition
+
+def check_any_node_more_than_two_outgoing_edges(edges, nodes_by_community):
+    """ Check if any of the nodes have more than two outgoing edges.
+
+    Args:
+        edges (list): A list of tuples representing the nodes connected by the edges.
+        nodes_by_community (dict): A dictionary where the keys are the community ID and values are the list of nodes in that community.
+
+    Returns:
+        bool: True if any node has more than two outgoing edges; otherwise False.
+    """
+
+    for nodes in nodes_by_community.values():
+        relevant_edges = get_relevant_edges(nodes, edges)
+        edge_count = Counter()
+
+        for edge in relevant_edges:
+            edge_count.update(edge)
+
+        for count in edge_count.values():
+            if count > 2:
+                return True
+        return False
+
