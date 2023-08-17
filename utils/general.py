@@ -122,3 +122,26 @@ def check_value_in_list(value1, value2, lst):
     """
 
     return value1 if value1 in lst else (value2 if value2 in lst else None)
+
+def find_most_common_words(word_list):
+    """ Find the most common words in a given list of words.
+
+    Args:
+        word_list (list): A list of words to analyze.
+
+    Returns:
+        list: A list of the most common words (can contain multiple words).
+    """
+
+    joined_texts = ' '.join(word_list)
+
+    # Tokenize and preprocess the text
+    words = re.findall(r'\w+', joined_texts) 
+
+    word_counts = Counter(words)
+    most_common_count = word_counts.most_common(1)[0][1]
+
+    # Get all words that have the same count as the most common count
+    most_common_words = [word for word, count in word_counts.items() if count == most_common_count]
+
+    return most_common_words
