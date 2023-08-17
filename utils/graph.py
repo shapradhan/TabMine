@@ -433,3 +433,30 @@ def find_similar_nodes(node, nodes, edges, similarity_threshold, embeddings_dict
                 dissimilar_nodes.append(other_node)
     
     return similar_nodes, dissimilar_nodes
+
+def find_additional_communities(nodes, edges, similarity_threshold, embeddings_dict):
+    """ Find additional communities recursively.
+
+    Args:
+        nodes (list): A list of nodes.
+        edges (list): A list of tuples representing the nodes connecting an edge.
+        similarity_threshold (float): The similarity threshold value.
+        embeddings_dict (dict): A dictionary where the keys are the table (node) names and values the embeddings of the description.
+    
+    Returns:
+        list: A list of list with nodes of the additional communities in the inner lists.
+    """
+
+    if not nodes:
+        return []
+
+    node = nodes[0]
+    similar_nodes, remaining_nodes = find_similar_nodes(node, nodes, edges, similarity_threshold, embeddings_dict)
+
+    # Recursively process remaining nodes
+    recursive_results = find_additional_communities(remaining_nodes, edges, similarity_threshold, embeddings_dict)
+
+    # Group the node and its similar nodes together
+    group = [node] + similar_nodes
+
+    return [group] + recursive_results if group else recursive_results
