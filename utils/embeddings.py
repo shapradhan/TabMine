@@ -2,6 +2,7 @@ import numpy as np
 import os
 
 from sklearn.metrics.pairwise import cosine_similarity
+
 from utils.general import make_subdirectory, is_file_in_subdirectory
 
 
@@ -127,8 +128,7 @@ def get_embeddings_dict(description_dict, model, embeddings_folder_name):
             embeddings = load_embeddings_from_file(embeddings_folder_name, embeddings_filename)
         else:
             embeddings = create_string_embeddings(description, model)
-            save_embeddings_to_file(embeddings, folder=embeddings_folder_name, filename=embeddings_filename)
+            save_embeddings_to_file(embeddings, folder_name=embeddings_folder_name, filename=embeddings_filename)
 
         embeddings_dict[table] = embeddings
     return embeddings_dict
-    
