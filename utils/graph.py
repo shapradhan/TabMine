@@ -384,3 +384,21 @@ def check_any_node_more_than_two_outgoing_edges(edges, nodes_by_community):
                 return True
         return False
 
+def check_edge_connection_between_nodes(node1, node2, edges):
+    """ Check if there is an edge between given nodes.
+
+    Args:
+        node1 (str): A node to check if there is an edge connection.
+        node2 (str): A node to check if there is an edge connection.
+        edges (list): A list of tuples representing the nodes connecting an edge.
+    
+    Returns:
+        bool: True if there is an edge between two given nodes; otherwise False.
+    """
+    
+    for edge in edges:
+        source_node = edge[0]
+        target_node = edge[1]
+        if (source_node == node1 and target_node == node2) or (source_node == node2 and target_node == node1):
+            return True
+    return False
