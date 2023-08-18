@@ -1,5 +1,6 @@
 import pandas as pd
 import random
+import sys
 import tensorflow_hub as hub
 
 from community import community_louvain as cl
@@ -22,6 +23,11 @@ class ArgumentNotFoundError(Exception):
     pass
 
 if __name__ == '__main__':
+  if len(sys.argv) > 1:
+    dkd_filename = sys.argv[1]
+  else:
+    raise ArgumentNotFoundError("Required DKD filename is not provided.")
+
   load_dotenv()
     
   DB_CONFIG_FILENAME = getenv('DB_CONFIG_FILENAME')
