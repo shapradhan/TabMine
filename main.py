@@ -18,6 +18,9 @@ from utils.graph import arrange_nodes_in_series, convert_communities_list_to_par
   find_communities_connecting_nodes, get_edges, get_relevant_edges, group_nodes_by_community, initialize_graph, \
   check_any_node_more_than_two_outgoing_edges, find_additional_communities
 
+class ArgumentNotFoundError(Exception):
+    pass
+
 if __name__ == '__main__':
   load_dotenv()
     
