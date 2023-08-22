@@ -20,8 +20,21 @@ def compute_similarity_between_node_and_node_group(node, node_group, embeddings_
     node_group_average_embeddings = compute_average_embedding(node_group_embeddings)
     return calculate_similarity_between_embeddings(node_embeddings, node_group_average_embeddings)
 
+def find_neighboring_nodes_in_same_community(partition, node_of_interest):
+    """ Find neighboring nodes in the same community
 
-def move_connecting_nodes(partition, nodes_by_community, community_connecting_nodes_dict, embeddings_dict):
+    Args:
+        partition (dict): A dictionary where keys are nodes and values are the corresponding community IDs. 
+            The communities are numbered from 0 to number of communities.
+        node_of_interest (str): The node for which we have to find neighboring nodes in the same community.
+    
+    Returns:
+        list: A list containing the neighboring nodes of the node_of_interest in the same community.
+    """
+    
+    node_community = partition[node_of_interest]
+    neighbor_nodes_in_same_community = [node for node, community_id in partition.items() if community_id == node_community and node != node_of_interest]
+    return neighbor_nodes_in_same_community
     """ Move connecting nodes to a more similar community 
 
     Args:
