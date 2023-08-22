@@ -455,8 +455,8 @@ def find_additional_communities(nodes, edges, similarity_threshold, embeddings_d
 
     # Recursively process remaining nodes
     recursive_results = find_additional_communities(remaining_nodes, edges, similarity_threshold, embeddings_dict)
-
+    
     # Group the node and its similar nodes together
     group = [node] + similar_nodes
-
+     
     return [group] + recursive_results if group else recursive_results
