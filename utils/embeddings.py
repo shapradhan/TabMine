@@ -84,11 +84,11 @@ def calculate_average_similarity(embeddings):
     Example:
         If emebddings list contains embeddings for 4 items A, B, C, and D.
         similarity_scores matrix will look like the following.
-              A       B      C       D
-          A  1.00  (0.34)  (0.23)  (0.54)
-          B  0.34  (1.00)  (0.27)  (0.59)
-          C  0.23   0.27   (1.00)  (0.24)
-          D  0.54   0.59    0.24   (1.00)
+              A        B      C       D
+          A  (1.00)  (0.34)  (0.23)  (0.54)
+          B  0.34    (1.00)  (0.27)  (0.59)
+          C  0.23     0.27   (1.00)  (0.24)
+          D  0.54     0.59    0.24   (1.00)
         We don't want the values in brackets because the similarity between A and B, for instance, is the same as similarity between B and A.
         We also don't want the similarity between self nodes (e.g., A and A).
 
