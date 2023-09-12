@@ -460,3 +460,18 @@ def find_additional_communities(nodes, edges, similarity_threshold, embeddings_d
     group = [node] + similar_nodes
      
     return [group] + recursive_results if group else recursive_results
+
+def draw_simple_graph(G):
+    """ Draw a simple undirected graph using the networkx library.
+
+    Args:
+        G (networkx.Graph): The graph to be drawn.
+
+    Returns:
+        None
+    """
+    
+    pos = nx.spring_layout(G) 
+    nx.draw(G, pos, with_labels=True, node_size=500, node_color='skyblue', font_size=12, font_color='black', font_weight='bold')
+    plt.show() 
+
