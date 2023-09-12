@@ -2,6 +2,7 @@ import pandas as pd
 import random
 import sys
 import tensorflow_hub as hub
+import time
 
 from community import community_louvain as cl
 from dotenv import load_dotenv
@@ -9,6 +10,7 @@ from os import getenv, path
 
 from data_extractor import get_all_fks, get_table_names
 from db_connector import connect
+
 
 from community_labeler import labeler
 from connecting_node_mover import move_connecting_nodes
@@ -24,6 +26,9 @@ class ArgumentNotFoundError(Exception):
     pass
 
 if __name__ == '__main__':
+  total_time = 0
+  start_time = time.time()
+  
   if len(sys.argv) > 1:
     dkd_filename = sys.argv[1]
   else:
@@ -65,7 +70,15 @@ if __name__ == '__main__':
   #   }
 
   print('Original partition: {0}'.format(original_partition))
+
+  end_time = time.time()
+  execution_time = end_time - start_time
+  total_time += execution_time
+  print('EXECUTION TIME 1', execution_time)
+
   draw_graph(G, original_partition, title='Original Communities - Undirected - Louvain', color_map='Pastel1')
+
+  start_time = time.time()
 
   # Arrange nodes by community and use that arrangement to get edges and their connecting nodes
   nodes_by_community = group_nodes_by_community(original_partition)
@@ -106,12 +119,14 @@ if __name__ == '__main__':
   if nodes_have_more_than_two_outgoing_edges:
     # If any node has more than two outgoing edges
     temp_community_list = []
+    
     for community_id, nodes in nodes_by_community.items():
       # similar_nodes = find_additional_communities(nodes, edges, SIMILARITY_THRESHOLD, embeddings_dict)
       similar_nodes = identify_additional_communities_by_edge_removal(G, nodes, SIMILARITY_THRESHOLD, embeddings_dict)
       temp_community_list.append(similar_nodes)
-    
+
     final_communities = [community for c in temp_community_list for community in c]
+
   else:
     # If no node has more than two outgoing edges
 
@@ -163,7 +178,14 @@ if __name__ == '__main__':
   community_labels = labeler(final_partition, descriptions_dict)
   # Example community_labels = {0: 'bill', 1: 'account', 2: 'sd delivery', 3: 'sale', 4: 'message status', 5: 'change'}
 
+  end_time = time.time()
+  execution_time = end_time - start_time
+  total_time += execution_time
+  print('EXECUTION TIME 2', execution_time)
+
   draw_graph(new_G, final_partition, title='Modified Communities - Undirected - Louvain', labels= community_labels, color_map='Pastel1')
+
+  start_time = time.time()
 
   # DKD Handling
   dkd_file_path = path.join(DKD_DIR_NAME, dkd_filename)
@@ -173,3 +195,12 @@ if __name__ == '__main__':
 
   print('Document-Label Matching')
   print(sorted_df)
+
+  end_time = time.time()
+  execution_time = end_time - start_time
+  total_time += execution_time
+  print('EXECUTION TIME 3', execution_time)
+
+  print('TOTAL TIME', total_time)
+
+  
