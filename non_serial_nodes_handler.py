@@ -66,3 +66,40 @@ def identify_additional_communities(G, nodes, similarity_threshold, embeddings_d
             node_community_index[parent_node] = len(new_communities) - 1
 
     return new_communities
+  
+
+def identify_additional_communities_by_edge_removal(G, nodes, similarity_threshold, embeddings_dict):
+    """ Identify additional communities in an existing network by removing the edges connecting dissimilar nodes.
+
+    Args:
+        G (networkx.Graph): The existing network graph.
+        nodes (list): A list of nodes for which additional communities are to be identified.
+        similarity_threshold (float): The similarity threshold for considering nodes as part of a community.
+        embeddings_dict (dict): A dictionary containing node embeddings.
+
+    Returns:
+        list of list: A list of list containing nodes that are members of a community.
+    """
+
+    subgraph = G.subgraph(nodes)
+    subgraph_edges = list(subgraph.edges())
+
+    modified_edges = []
+    removed_edges = []
+
+    for edge in subgraph_edges:
+        parent_node = edge[0]
+        child_node = edge[1]
+
+        similarity_score = calculate_similarity_between_embeddings(embeddings_dict[parent_node], embeddings_dict[child_node])
+
+        modified_edges.append(edge) if similarity_score >= similarity_threshold else removed_edges.append(edge)
+    
+    new_G = initialize_graph(nodes, modified_edges, False)
+   
+
+    additional_communities = []
+    for component in get_conencted_components(new_G):
+        additional_communities.append(list(component))
+
+    return additional_communities
