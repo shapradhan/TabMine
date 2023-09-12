@@ -17,7 +17,8 @@ from serial_nodes_handler import detect_communities_in_node_series
 from utils.embeddings import get_embeddings_dict
 from utils.general import create_dict_from_df
 from utils.graph import arrange_nodes_in_series, convert_communities_list_to_partition, draw_graph, find_communities_connecting_nodes, get_edges, get_relevant_edges, \
-  group_nodes_by_community, initialize_graph, check_any_node_more_than_two_outgoing_edges, find_additional_communities
+  group_nodes_by_community, initialize_graph, check_any_node_more_than_two_outgoing_edges
+from non_serial_nodes_handler import identify_additional_communities_by_edge_removal
 
 class ArgumentNotFoundError(Exception):
     pass
@@ -106,7 +107,8 @@ if __name__ == '__main__':
     # If any node has more than two outgoing edges
     temp_community_list = []
     for community_id, nodes in nodes_by_community.items():
-      similar_nodes = find_additional_communities(nodes, edges, SIMILARITY_THRESHOLD, embeddings_dict)
+      # similar_nodes = find_additional_communities(nodes, edges, SIMILARITY_THRESHOLD, embeddings_dict)
+      similar_nodes = identify_additional_communities_by_edge_removal(G, nodes, SIMILARITY_THRESHOLD, embeddings_dict)
       temp_community_list.append(similar_nodes)
     
     final_communities = [community for c in temp_community_list for community in c]
