@@ -470,8 +470,21 @@ def draw_simple_graph(G):
     Returns:
         None
     """
-    
+
     pos = nx.spring_layout(G) 
     nx.draw(G, pos, with_labels=True, node_size=500, node_color='skyblue', font_size=12, font_color='black', font_weight='bold')
     plt.show() 
 
+def get_conencted_components(G):
+    """ Find the connected components of an undirected graph.
+
+    Args:
+    G (networkx.Graph): The undirected graph for which connected components are to be found.
+
+    Returns:
+        list of networkx.Graph: A list of connected components, where each component is represented as a subgraph.
+    """
+    
+    return list(nx.connected_components(G))
+
+    
