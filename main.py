@@ -8,9 +8,9 @@ from community import community_louvain as cl
 from dotenv import load_dotenv
 from os import getenv, path
 
-from data_extractor import get_all_fks, get_table_names
+from data_extractor import get_all_fks, get_table_names as get_table_names_p
 from db_connector import connect
-
+from mysql_data_extractor import get_all_foreign_key_relationships, get_table_names as get_table_names_m
 
 from community_labeler import labeler
 from connecting_node_mover import move_connecting_nodes
@@ -21,6 +21,7 @@ from utils.general import create_dict_from_df
 from utils.graph import arrange_nodes_in_series, convert_communities_list_to_partition, draw_graph, find_communities_connecting_nodes, get_edges, get_relevant_edges, \
   group_nodes_by_community, initialize_graph, check_any_node_more_than_two_outgoing_edges
 from non_serial_nodes_handler import identify_additional_communities_by_edge_removal
+
 
 class ArgumentNotFoundError(Exception):
     pass
@@ -46,14 +47,24 @@ if __name__ == '__main__':
   DKD_EMBEDDINGS_DIR_NAME = getenv('DKD_EMBEDDINGS_DIR')
   LABELS_DIR_NAME = getenv('LABELS_DIR')
   DKD_DIR_NAME = getenv('DKD_DIR')
+  DB_TYPE = getenv('DB_TYPE')
+  DB_NAME = getenv('DB_NAME')
   
-  cur = connect(filename = DB_CONFIG_FILENAME, section = SECTION)
-  foreign_key_relation_list = get_all_fks(cur)
-  
-  nodes = [i[0] for i in get_table_names(cur)]
+  conn = connect(filename = DB_CONFIG_FILENAME, section = SECTION)
+
+  with conn:
+      cursor = conn.cursor()
+
+      if DB_TYPE == 'postgres':
+        foreign_key_relation_list = get_all_fks(cursor)
+        nodes = [i[0] for i in get_table_names_p(cursor)]
+      elif DB_TYPE == 'mysql':
+        rows = get_table_names_m(conn, cursor, DB_NAME)
+        nodes = [i[0] for i in rows]
+        foreign_key_relation_list = get_all_foreign_key_relationships(conn, cursor, DB_NAME)
+
   edges = [get_edges(i) for i in foreign_key_relation_list]
 
-  
   # Set a random seed for reproducibility
   seed = 42
   random.seed(seed)

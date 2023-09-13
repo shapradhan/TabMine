@@ -98,6 +98,7 @@ def move_connecting_nodes(partition, nodes_by_community, community_connecting_no
     """
 
     community_average_similarity_dict = {}
+    
     for neighboring_community_id, community_nodes in nodes_by_community.items():
         community_embeddings = [embeddings_dict[node] for node in community_nodes]
         average_similarity_of_communities = calculate_average_similarity(community_embeddings)
@@ -118,26 +119,20 @@ def move_connecting_nodes(partition, nodes_by_community, community_connecting_no
         # Nodes connect more than two communities
         for connector_node in set(nodes_connecting_multiple_communities):
             neighboring_community_nodes = {}
-            current_community_id = None
 
             for edge, nodes in community_connecting_nodes_dict.items():
                 if nodes:
                     nodes = list(nodes)
                     if connector_node in nodes:
-                        current_community_id = edge[1]
                         neighboring_community_id = edge[0]
                         nodes_already_checked.append(connector_node)
                         neighboring_community_nodes[neighboring_community_id] = get_nodes_in_community(partition, neighboring_community_id)
                        
-
             for neighboring_community_id in neighboring_community_nodes.keys():
                 partition = check_similarity_and_move(
                     G,
-                    community_average_similarity_dict, 
                     connector_node, 
                     neighboring_community_id, 
-                    current_community_id, 
-                    similarity_threshold, 
                     partition, 
                     embeddings_dict)
 
@@ -150,15 +145,11 @@ def move_connecting_nodes(partition, nodes_by_community, community_connecting_no
 
                 for connector_node in nodes:
                     neighboring_community_id = edge[0]
-                    current_community_id = edge[1]
 
                     partition = check_similarity_and_move(
                         G,
-                        community_average_similarity_dict, 
                         connector_node, 
                         neighboring_community_id, 
-                        current_community_id, 
-                        similarity_threshold, 
                         partition, 
                         embeddings_dict)
                     
