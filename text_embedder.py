@@ -1,11 +1,8 @@
 import os
 import numpy as np
 import re
-import spacy
 
 from utils.general import make_subdirectory
-
-nlp = spacy.load('en_core_web_lg')
 
 class TextEmbedder:
     def __init__(self, text='', model=None):
