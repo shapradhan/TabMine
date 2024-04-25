@@ -47,6 +47,29 @@ def reset_community_id_numbers(partition):
     
     return fixed_partition
 
+def extract_substring_between_strings(text, start_str, end_str):
+    """
+    Extracts the substring located between two specified strings in the given text.
+
+    Args:
+        text (str): The input text from which the word will be extracted.
+        start_str (str): The starting string marking the beginning of the target word.
+        end_str (str): The ending string marking the end of the target word.
+
+    Returns:
+        str or None: The substring between start_str and end_str if found, or None if not found.
+    
+    Example:
+        >>> get_substring_between_strings('gobbledygook', 'ob', 'go')
+        'bledy'
+    """
+
+    pattern = re.compile(rf"{re.escape(start_str)}(.*?){re.escape(end_str)}")
+    match = pattern.search(text)
+    if match:
+        return match.group(1)
+    return None
+
 def is_file_in_subdirectory(subdirectory_name, filename):
     """Check if a file with a given filename is in a sub directory within the current direction,
 
