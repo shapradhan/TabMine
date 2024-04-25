@@ -24,21 +24,25 @@ class TextPreprocessor:
         self.text = re.sub(r'\s+', ' ', self.text).strip()
         return self
 
-    def lemmatize_and_remove_stop_words(self, pos_tagged=False):
+    def lemmatize_and_remove_stop_words(self, pos_tagged=False, nouns_only=False):
         stop_words = nlp.Defaults.stop_words
         doc = nlp(self.text)
         tokens = []
-
-        if pos_tagged:
-            tokens = [(token.lemma_, token.pos_) for token in doc]
+        
+        if nouns_only:
+            tokens = [token.lemma_ for token in doc if token.pos_ == 'NOUN']
         else:
-            tokens = [token.lemma_ for token in doc]
+            if pos_tagged:
+                tokens = [(token.lemma_, token.pos_) for token in doc ]
+            else:
+                tokens = [token.lemma_ for token in doc]
 
         self.text = ' '.join(token for token in tokens if token[0] not in stop_words)
         return self 
     
-    def preprocess(self, common_terms=None, pos_tagged=False):
+    def preprocess(self, common_terms=None, pos_tagged=False, nouns_only=False):
         if common_terms:
             self.remove_common_terms(common_terms)
         
-        return self.remove_punctuation().remove_extra_spaces().lemmatize_and_remove_stop_words(pos_tagged).text
+        return self.remove_punctuation().remove_extra_spaces().lemmatize_and_remove_stop_words(pos_tagged, nouns_only).text
+    
