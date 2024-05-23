@@ -1,3 +1,5 @@
+from utils.embeddings import calculate_average_similarity
+
 class Community:
     def __init__(self, partition):
         """
@@ -110,6 +112,67 @@ class Community:
         """
 
         return [node for node, comm_id in self.partition.items() if comm_id == community_id]
+
+    def _move(self, graph, node, node_original_community_id, community_to_move_to, max_community_id):
+        """
+        Retrieves the nodes in a given community and moves the node to a the community with community ID = community_to_move_to
+
+        Args:
+            graph (networkx.Graph): The graph representing the relationships between the tables.
+            node (str): The connector node that has to be moved.
+            node_original_community_id (int): The ID of the community in which the node was originally in.
+            community_to_move_to (int): The ID of the community to which the node has to be moved.
+            max_community_id (int): The maximum ID value which is in the original partition.
+
+        Returns:
+            dict: A modified partition in which the node has been moved to a different community, if required. 
+                The keys represent the nodes and the values represent the community ID.
+        """
+
+        partition = self.partition
+
+        # Gets all nodes in the original community from the partition
+        nodes_in_community = [node for node, community_id in partition.items() if community_id == node_original_community_id]
+        
+        # Remove the connector node from its original community if it has to be moved to a different community
+        if community_to_move_to != node_original_community_id and node in nodes_in_community:
+            nodes_in_community = [x for x in nodes_in_community if x != node]
+
+        partition[node] = community_to_move_to
+        connected_components = graph.get_connected_components(nodes_in_community)
+
+        if connected_components:
+            for group in connected_components:
+                for node in group:
+                    partition[node] = max_community_id + 1
+                max_community_id = max_community_id + 1
+        
+        return partition
+
+    def move_connector_nodes(self, graph, embeddings_dict, check_neighboring_nodes_only=False):
+        """
+        Identify the connector nodes and moves them 
+
+        Args:
+            graph (networkx.Graph): The graph representing the relationships between the tables.
+            embeddings_dict (dict): A dictionary with table names as they key and its embeddings as the value.
+            check_neighboring_nodes_only (Boolean): A value indicating whether the algorithm should just check for neighboring nodes when comparing 
+                or neighboring communities instead. Defaults to False, indicating the check should be of the entire neighboring communities. 
+        
+        Returns:
+            dict: A dictionary in which the keys represent the table names and the values represent the ID of community in which the tables belong.
+        """
+        
+        partition = self.partition
+
+        for node in self.neighbor_count_by_connector_nodes:
+            highest_similarity_score = 0
+            
+            node_original_community_id = partition[node]
+            max_value_key = max(partition, key=partition.get)
+            max_community_id = partition[max_value_key]
+
+            if check_neighboring_nodes_only:
                 neighbors = list(graph.neighbors(node))
                 
                 for neighbor in neighbors:
