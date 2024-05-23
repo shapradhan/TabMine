@@ -122,5 +122,5 @@ def filter_values_by_dictionary(values, dictionary):
     >>> print(result)
     ['a', 'b']
     """
-    print('values', values)
+
     return list(set(values) & set(dictionary.keys()))
