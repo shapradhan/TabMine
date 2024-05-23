@@ -132,3 +132,22 @@ class SubGraphAnalyzer:
     
         embeddings.append(embeddings_dict[node])
         return embeddings
+
+    def _update_similarity_score(self, similarity_score, neighbor, partition, count):
+        """
+        Update the similarity score
+
+        Args:
+            similarity_score (float): A similarity score 
+            neighbor (str): The neighbor with which the similarity score is the highest
+            partition (dict): A dictionary where keys are nodes and values are the corresponding community IDs.
+            count (int): A community ID that can be used if neighbor is not present in the partition.
+
+        Returns:
+            tuple: A tuple containing multiple values.
+            - The first value (float): The highest similarity score.
+            - The second value (str): The neighbor with which the similarity score is the highest.
+            - The third value (int): The community ID of the neighbor in the partition if it exists in partition or the value of count.
+        """
+        
+        return similarity_score, neighbor, partition.get(neighbor, count)
