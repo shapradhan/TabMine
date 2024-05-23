@@ -76,6 +76,28 @@ class Community:
         """
 
         return [node for node, comm_id in self.partition.items() if comm_id == community_id]
+    
+    def _get_neighboring_communities(self, graph, node):
+        """
+        Retrieves the neighboring communities of a given node in a graph.
+
+        Args:
+            graph (networkx.Graph): The graph representing the relationships between the tables.
+            node (str): The node for which neighboring communities are to be found.
+
+        Returns:
+            list: A list of neighboring communities of the given node.
+        """
+
+        neighbors = graph.neighbors(node)
+        community_set = set()
+        
+        for neighbor in neighbors:
+            community_id = self.partition[neighbor]
+            community_set.add(community_id)
+
+        return list(community_set) 
+
                 neighbors = list(graph.neighbors(node))
                 
                 for neighbor in neighbors:
