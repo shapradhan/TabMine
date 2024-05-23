@@ -17,7 +17,7 @@ def make_subdirectory(subdirectory_name):
     else:
         return False
 
-def reset_community_id_numbers(partition, count = 0):
+def reset_community_id_numbers(partition, count=0):
     """
     Reset the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
     

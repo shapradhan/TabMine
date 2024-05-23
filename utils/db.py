@@ -4,7 +4,7 @@ from utils.general import extract_substring_between_strings
 
 def _get_parent_table(foreign_key_relation_list):
     """ 
-    Extracts the name of the parent table 
+    Extract the name of the parent table 
     
     Parent table is the table whose primary key is used as the foreign key in another table.
     The foreign key relation text is the third item, denoted by index 2, in the list.
@@ -23,7 +23,7 @@ def _get_parent_table(foreign_key_relation_list):
 
 def _get_edges(foreign_key_relation_list):
     """ 
-    Gets the nodes representing the two ends of an edge
+    Get the nodes representing the two ends of an edge
 
     The first item of the tuple is the parent node (i.e., the table whose primary key is used as the foreign key in another table).
     The second item of the tuple is the child node (i.e., the table that is using the primary key of another table as the foreign key).
@@ -41,7 +41,7 @@ def _get_edges(foreign_key_relation_list):
 
 def get_nodes_and_edges_from_db(conn, db_type, db_name):
     """ 
-    Gets the nodes and edges from a database. Nodes represent the tables in the database and edges represent the relationships between the tables.
+    Get the nodes and edges from a database. Nodes represent the tables in the database and edges represent the relationships between the tables.
 
     Args:
         db_type (str): The type of the databse. Options are postgres and mysql.
