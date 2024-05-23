@@ -1,14 +1,13 @@
 import csv
 import random
 
+from community import community_louvain as cl
 from db_connector import connect
 from dotenv import load_dotenv
-from community import community_louvain as cl
 from os import getenv
 from sentence_transformers import SentenceTransformer
 
 from community_graph import Graph
-
 from sub_graph_analyzer import SubGraphAnalyzer
 from label_dkd_matcher import Matcher
 from table_community import Community
