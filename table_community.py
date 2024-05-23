@@ -55,6 +55,27 @@ class Community:
             # Get the community_id and make that a key of an empty list, in which the nodes are appended
             self.nodes_by_community.setdefault(community_id, []).append(node)
         return self.nodes_by_community
+
+    def _get_nodes_by_community_id(self, community_id):
+        """
+        Get list of nodes given a community ID
+
+        Args:
+            community_id (int): An ID of the community for which nodes belonging to that community have to be identified.
+
+        Returns:
+            list: A list of nodes for the given community ID.
+
+        Example:
+            >>> c = Community({
+                'vbrk': 0, 'bkpf': 0, 'likp': 1, 'lips': 1, 'bseg': 0, 'vbak': 3,  'vbap': 1, 'cdhdr': 2, 'nast': 3, 'cdpos': 2, 'vbfa': 1, 'vbrp': 0
+            })
+            >>> nodes_by_community_id = c.get_nodes_by_community_id(1)
+            >>> print(nodes_by_community_id)
+            ['likp', 'lips', 'vbap', 'vbfa']
+        """
+
+        return [node for node, comm_id in self.partition.items() if comm_id == community_id]
                 neighbors = list(graph.neighbors(node))
                 
                 for neighbor in neighbors:
