@@ -23,7 +23,7 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, use_ope
 
     preprocessed_texts = {}
 
-    EMBEDDINGS_DIR = getenv('EMBEDDINGS_DIR')
+    DESCRIPTION_EMBEDDINGS_DIR = getenv('DESCRIPTION_EMBEDDINGS_DIR')
     TABLE_NAME_INCLUDED = getenv('TABLE_NAME_INCLUDED').lower() in ['true', 'yes', 1]
     PROCESS_RAW = getenv('PROCESS_RAW').lower() in ['true', 'yes', 1]
     COMMON_TERMS_FILENAME = getenv('COMMON_TERMS_FILENAME')
@@ -32,9 +32,9 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, use_ope
     
     embeddings_filename = '{0}_embeddings.npy'.format(table_name)
 
-    if is_file_in_subdirectory(EMBEDDINGS_DIR, embeddings_filename):
+    if is_file_in_subdirectory(DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename):
         embedder = TextEmbedder()
-        embeddings = embedder.load_embeddings_from_file(EMBEDDINGS_DIR, embeddings_filename)
+        embeddings = embedder.load_embeddings_from_file(DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename)
     else:
         if TABLE_NAME_INCLUDED:
             description = table_name + " " + description
@@ -48,7 +48,7 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, use_ope
             embedder = TextEmbedder(preprocessed_text, model)
             
         embeddings = embedder.create_embeddings(use_openai)
-        embedder.save_embeddings(embeddings, EMBEDDINGS_DIR, embeddings_filename)
+        embedder.save_embeddings(embeddings, DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename)
     
     embeddings_dict[table_name] = embeddings
     return embeddings_dict

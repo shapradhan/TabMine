@@ -133,14 +133,14 @@ class Matcher:
         document_embeddings = {}
         label_embeddings = {}
 
-        DOCUMENTS_DIR = getenv('DOCUMENTS_DIR')
-        LABELS_DIR = getenv('LABELS_DIR')
+        DOCUMENT_EMBEDDINGS_DIR = getenv('DOCUMENT_EMBEDDINGS_DIR')
+        LABEL_EMBEDDINGS_DIR = getenv('LABEL_EMBEDDINGS_DIR')
 
         for doc in self.documents:
-            self._load_or_create_embeddings(doc, DOCUMENTS_DIR, document_embeddings, model, use_openai)
+            self._load_or_create_embeddings(doc, DOCUMENT_EMBEDDINGS_DIR, document_embeddings, model, use_openai)
         
         for label in self.labels.values():
-            self._load_or_create_embeddings(label, LABELS_DIR, label_embeddings, model, use_openai)
+            self._load_or_create_embeddings(label, LABEL_EMBEDDINGS_DIR, label_embeddings, model, use_openai)
         
         return document_embeddings, label_embeddings
     
