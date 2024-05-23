@@ -1,4 +1,8 @@
 import csv, json
+
+from text_embedder import TextEmbedder
+from utils.general import is_file_in_subdirectory
+
 class Matcher:
     def __init__(self):
         """
@@ -71,3 +75,37 @@ class Matcher:
                 label = row[1]
 
                 self.labels[community_id] = label
+    
+    def _load_or_create_embeddings(self, text, dir, embeddings_dict, model, use_openai):
+        """
+        Load the embeddings if they exists; otherwise, create embeddings.
+
+        Args:
+            text (str): The text for which the embedding has to be created.
+            dir (str): The path of the directory in which the embeddings may exists.
+            embeddings_dict (dict): An empty dictionary.
+            model (str or SentenceTransformer): The name of the model if OpenAI is to be used or a SentenceTransformer model.
+            use_openai (bool): A flag indicating whether to use the OpenAI API to generate the embeddings. 
+                If True, the embeddings will be generated using OpenAI's model. If False, an alternative embedding method will be used. 
+        
+        Returns:
+            dict: A dictionary in which the key represents either the document from Domain Knowledge Definition file or the community label and the
+                values represent the embeddings associated with that text.
+        
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
+        """
+        
+        text = text.strip()
+        embeddings_filename = '{0}_embeddings.npy'.format(text.replace(' ', '_'))
+
+        if is_file_in_subdirectory(dir, embeddings_filename):
+            embedder = TextEmbedder()
+            embeddings_dict[text] = embedder.load_embeddings_from_file(dir, embeddings_filename)
+        else:
+            embedder = TextEmbedder(text, model)
+            embeddings = embedder.create_embeddings(use_openai)
+            embeddings_dict[text] = embeddings
+            embedder.save_embeddings(embeddings, dir, embeddings_filename)
+            
+        return embeddings_dict
