@@ -1,5 +1,6 @@
 import csv, json
 
+from os import getenv
 from text_embedder import TextEmbedder
 from utils.general import is_file_in_subdirectory
 
@@ -95,7 +96,7 @@ class Matcher:
         Note:
             - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
-        
+
         text = text.strip()
         embeddings_filename = '{0}_embeddings.npy'.format(text.replace(' ', '_'))
 
@@ -109,3 +110,35 @@ class Matcher:
             embedder.save_embeddings(embeddings, dir, embeddings_filename)
             
         return embeddings_dict
+
+    def _get_embeddings(self, model, use_openai):
+        """
+        Get embeddings for the documents from Domain Knowledge Definition file and the labels assigned to the communities.
+
+        Args:
+            model (str or SentenceTransformer): The name of the model if OpenAI is to be used or a SentenceTransformer model.
+            use_openai (bool): A flag indicating whether to use the OpenAI API to generate the embeddings. 
+                If True, the embeddings will be generated using OpenAI's model. If False, an alternative embedding method will be used. 
+        
+        Returns:
+            tuple: A tuple consisting of two values.
+            - The first value (list): A list of embeddings for the documents from the Domain Knowledge Definition file.
+            - The second value (list): A list of embeddings for the community labels.
+                
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
+        """
+
+        document_embeddings = {}
+        label_embeddings = {}
+
+        DOCUMENTS_DIR = getenv('DOCUMENTS_DIR')
+        LABELS_DIR = getenv('LABELS_DIR')
+
+        for doc in self.documents:
+            self._load_or_create_embeddings(doc, DOCUMENTS_DIR, document_embeddings, model, use_openai)
+        
+        for label in self.labels.values():
+            self._load_or_create_embeddings(label, LABELS_DIR, label_embeddings, model, use_openai)
+        
+        return document_embeddings, label_embeddings
