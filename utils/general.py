@@ -1,5 +1,4 @@
-import os
-import re
+import os, re
 
 def make_subdirectory(subdirectory_name):
     """
@@ -18,7 +17,7 @@ def make_subdirectory(subdirectory_name):
     else:
         return False
 
-def reset_community_id_numbers(partition):
+def reset_community_id_numbers(partition, count = 0):
     """
     Reset the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
     
@@ -37,7 +36,6 @@ def reset_community_id_numbers(partition):
 
     counts_dict = {}
     fixed_partition = {}
-    count = 0
 
     for key, value in partition.items():
         if value not in counts_dict:
@@ -45,7 +43,7 @@ def reset_community_id_numbers(partition):
             count += 1
         fixed_partition[key] = counts_dict[value]
     
-    return fixed_partition
+    return fixed_partition, count
 
 def extract_substring_between_strings(text, start_str, end_str):
     """
@@ -105,58 +103,24 @@ def read_lines(filename):
 
     with open(filename, 'r') as file:
         return [line.strip() for line in file.readlines()]
+
+def filter_values_by_dictionary(values, dictionary):
+    """
+    Filter a list of values by checking for their presence in the keys of a dictionary.
+
+    Args:
+        values (list): The list of values to be filtered.
+        dictionary (dict): The dictionary containing keys to be used for filtering.
     
-def contains_value(list_of_tuples, value):
-    """
-    Check if any tuple in the list contains the specified value.
-
-    Args:
-        list_of_tuples (list of tuples): The list of tuples to search.
-        value: The value to search for within the tuples.
-
     Returns:
-        bool: True if the value is found in any tuple, False otherwise.
-    """
-
-    return any(value in a for a in list_of_tuples)
-
-def find_keys_with_value(dictionary, target_value):
-    """
-    Find keys in a dictionary that have a specified value.
-
-    Args:
-        dictionary (dict): The dictionary to search.
-        target_value: The value to search for within the dictionary.
-
-    Returns:
-        list: A list of keys in the dictionary that have the specified value.
-    """
-
-    return [key for key, value in dictionary.items() if value == target_value]
-
-def append_unique_list(main_list, new_list):
-    """
-    Append elements from a new list to a main list if they are not already present.
-
-    Args:
-        main_list (list): The main list to which unique elements will be appended.
-        new_list (list): The list containing elements to be appended to the main list.
-
-    Returns:
-        None: The function modifies the main list in place.
+        list: A list containing values from the input list that are also present as keys in the dictionary.
 
     Example:
-        main_list = [1, 2, 3]
-        new_list = [3, 4, 5]
-        append_unique_list(main_list, new_list)
-        print(main_list)  # Output: [1, 2, 3, 4, 5]
+    >>> my_dict = {'a': 1, 'b': 2, 'c': 3}
+    >>> my_values = ['a', 'b', 'd', 'e']
+    >>> result = filter_values_by_dictionary(my_dict, my_values)
+    >>> print(result)
+    ['a', 'b']
     """
 
-    # Convert the lists to sets for comparison
-    main_set = {tuple(sublist) for sublist in main_list}
-    new_set = set(new_list)
-    
-    # If the new_list is not already in the main_list, append it
-    if tuple(new_set) not in main_set:
-        main_list.append(list(new_set))
-    return main_list
+    return list(set(values) & set(dictionary.keys()))
