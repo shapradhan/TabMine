@@ -78,6 +78,7 @@ class SubGraphAnalyzer:
 
         Args:
             node (str): The nodefor which neighbor communities have to be found.
+            node (str): The node for which neighbor communities have to be found.
             arranged_nodes (dict): A dictionary where the keys represent the nodes and the values represented the community ID 
                 that has been assigned to a key.
 
@@ -104,3 +105,30 @@ class SubGraphAnalyzer:
                 related_nodes = [n2 for n2, cid in arranged_nodes.items() if cid == community_id and n2 != node]
                 neighboring_communities.append(related_nodes)
         return neighboring_communities
+
+    def _modify_embeddings(self, node, embeddings, embeddings_dict, arranged_nodes={}):
+        """
+        Modify list of embeddings.
+
+        Args:
+            node (str): The node whose embeddings should be added to the list of embeddings.
+            embeddings_dict (dict): A dictionary where the keys represent the nodes and the values represented embeddings of the descriptions.
+            arranged_nodes (dict, optional): A dictionary where the keys represent the nodes and the values represented the community ID 
+                that has been assigned to a key. Defaults to an empty dictionary.
+
+        Returns:
+            list: A modified list of embeddings.
+ 
+        Example:
+            >>> node = 'vbap'
+            >>> arranged_nodes {'vbep': 0, 'vbeh': 0}
+            >>> embeddings = self._modify_embeddings(node, embeddings, embeddings_dict, arranged_nodes)
+        """
+        
+        if node in arranged_nodes:
+            community_id_of_current_node = arranged_nodes[node]
+            embeddings.extend([embeddings_dict[n] for n, community_id in arranged_nodes.items() if community_id == community_id_of_current_node])
+            return embeddings
+    
+        embeddings.append(embeddings_dict[node])
+        return embeddings
