@@ -29,8 +29,7 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, use_ope
     COMMON_TERMS_FILENAME = getenv('COMMON_TERMS_FILENAME')
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
-    # USE_OPENAI = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
-
+    
     embeddings_filename = '{0}_embeddings.npy'.format(table_name)
 
     if is_file_in_subdirectory(EMBEDDINGS_DIR, embeddings_filename):
