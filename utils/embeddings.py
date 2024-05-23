@@ -23,11 +23,13 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict):
 
     preprocessed_texts = {}
 
+    EMBEDDINGS_DIR = getenv('EMBEDDINGS_DIR')
+    TABLE_NAME_INCLUDED = getenv('TABLE_NAME_INCLUDED').lower() in ['true', 'yes', 1]
     PROCESS_RAW = getenv('PROCESS_RAW').lower() in ['true', 'yes', 1]
+    COMMON_TERMS_FILENAME = getenv('COMMON_TERMS_FILENAME')
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
-    TABLE_NAME_INCLUDED = getenv('TABLE_NAME_INCLUDED').lower() in ['true', 'yes', 1]
-    EMBEDDINGS_DIR = getenv('EMBEDDINGS_DIR')
+    USE_OPENAI = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
 
     embeddings_filename = '{0}_embeddings.npy'.format(table_name)
 
@@ -41,12 +43,12 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict):
         if PROCESS_RAW:
             embedder = TextEmbedder(description, model)
         else:
-            common_terms = read_lines('common_terms.txt')
+            common_terms = read_lines(COMMON_TERMS_FILENAME)
             preprocessed_text = TextPreprocessor(description).preprocess(common_terms, POS_TAGGED, NOUNS_ONLY)
             preprocessed_texts[table_name] = preprocessed_text
             embedder = TextEmbedder(preprocessed_text, model)
             
-        embeddings = embedder.create_embeddings()
+        embeddings = embedder.create_embeddings(use_openai=USE_OPENAI)
         embedder.save_embeddings(embeddings, EMBEDDINGS_DIR, embeddings_filename)
     
     embeddings_dict[table_name] = embeddings
