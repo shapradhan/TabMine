@@ -1,4 +1,4 @@
-from data_extractor import get_all_fks, get_table_names as get_table_names_p
+from postgres_data_extractor import get_all_fks, get_table_names as get_table_names_p
 from mysql_data_extractor import get_all_foreign_key_relationships, get_table_names as get_table_names_m
 from utils.general import extract_substring_between_strings
 
