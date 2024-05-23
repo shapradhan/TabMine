@@ -24,6 +24,37 @@ class Community:
         self.partition = partition
         self.nodes_by_community = {}
         self.neighbor_count_by_connector_nodes = {}
+
+    def group_nodes_by_community(self):
+        """
+        Group nodes based on the community partition.
+
+        Args:
+            partition (dict): A dictionary where keys are nodes and values are the corresponding community IDs.
+
+        Returns:
+            dict: A dictionary where keys are community IDs and values are lists of nodes belonging to each community.
+
+        Example:
+            >>> partition = {
+                'vbrk': 0, 'bkpf': 0, 'likp': 1, 'lips': 1, 'bseg': 0, 'vbak': 3, 
+                'vbap': 1, 'cdhdr': 2, 'nast': 3, 'cdpos': 2, 'vbfa': 1, 'vbrp': 0
+            }
+            >>> c = Community(partition)
+            >>> nodes_by_community = c.group_nodes_by_community()
+            >>> print(nodes_by_community)
+            {
+                0: ['vbrk', 'bkpf', 'bseg', 'vbrp'], 
+                1: ['likp', 'lips', 'vbap', 'vbfa'], 
+                2: ['cdhdr', 'cdpos'],
+                3: ['vbak', 'nast']
+            }
+        """
+
+        for node, community_id in self.partition.items():
+            # Get the community_id and make that a key of an empty list, in which the nodes are appended
+            self.nodes_by_community.setdefault(community_id, []).append(node)
+        return self.nodes_by_community
                 neighbors = list(graph.neighbors(node))
                 
                 for neighbor in neighbors:
