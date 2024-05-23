@@ -71,3 +71,36 @@ class SubGraphAnalyzer:
                     queue.append(neighbor)
 
         return result
+
+    def _filter_neighbor_nodes_for_neighbor_communities(self, node, arranged_nodes):
+        """
+        Get neighboring communities of nodes that are connected.
+
+        Args:
+            node (str): The nodefor which neighbor communities have to be found.
+            arranged_nodes (dict): A dictionary where the keys represent the nodes and the values represented the community ID 
+                that has been assigned to a key.
+
+        Returns:
+            list[list]: A list of list. The inner list includes nodes that are members of one community.
+ 
+        Example:
+            >>> node = 'vttp'
+            >>> arranged_nodes = {'likp': 0, 'vblk': 0}
+            >>> result = self._filter_neighbor_nodes_for_neighbor_communities(node, arranged_nodes)
+            >>> print(result)
+            [['likp', 'vblk']]
+
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
+        """
+
+        neighboring_communities = []
+        community_ids_to_consider = []
+
+        for n, community_id in arranged_nodes.items():
+            if self.graph.has_edge(node, n):
+                community_ids_to_consider.append(community_id)
+                related_nodes = [n2 for n2, cid in arranged_nodes.items() if cid == community_id and n2 != node]
+                neighboring_communities.append(related_nodes)
+        return neighboring_communities
