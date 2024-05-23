@@ -98,6 +98,18 @@ class Community:
 
         return list(community_set) 
 
+    def _get_nodes_by_community_id(self, community_id):
+        """
+        Retrieves the nodes in the community with a given ID.
+
+        Args:
+            community_id (int): The ID of the community for which nodes have to be identified.
+
+        Returns:
+            list: A list containing the nodes in a given community
+        """
+
+        return [node for node, comm_id in self.partition.items() if comm_id == community_id]
                 neighbors = list(graph.neighbors(node))
                 
                 for neighbor in neighbors:
