@@ -75,6 +75,9 @@ class Community:
             >>> nodes_by_community_id = c.get_nodes_by_community_id(1)
             >>> print(nodes_by_community_id)
             ['likp', 'lips', 'vbap', 'vbfa']
+        
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
 
         return [node for node, comm_id in self.partition.items() if comm_id == community_id]
@@ -89,6 +92,9 @@ class Community:
 
         Returns:
             list: A list of neighboring communities of the given node.
+        
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
 
         neighbors = graph.neighbors(node)
@@ -109,6 +115,9 @@ class Community:
 
         Returns:
             list: A list containing the nodes in a given community
+
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
 
         return [node for node, comm_id in self.partition.items() if comm_id == community_id]
@@ -127,6 +136,9 @@ class Community:
         Returns:
             dict: A modified partition in which the node has been moved to a different community, if required. 
                 The keys represent the nodes and the values represent the community ID.
+        
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
 
         partition = self.partition

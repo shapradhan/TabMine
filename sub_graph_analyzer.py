@@ -125,6 +125,9 @@ class SubGraphAnalyzer:
             >>> node = 'vbap'
             >>> arranged_nodes {'vbep': 0, 'vbeh': 0}
             >>> embeddings = self._modify_embeddings(node, embeddings, embeddings_dict, arranged_nodes)
+        
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
         
         if node in arranged_nodes:
@@ -150,6 +153,9 @@ class SubGraphAnalyzer:
             - The first value (float): The highest similarity score.
             - The second value (str): The neighbor with which the similarity score is the highest.
             - The third value (int): The community ID of the neighbor in the partition if it exists in partition or the value of count.
+        
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
         """
         
         return similarity_score, neighbor, partition.get(neighbor, count)
