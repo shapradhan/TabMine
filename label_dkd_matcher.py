@@ -1,4 +1,4 @@
-import json
+import csv, json
 class Matcher:
     def __init__(self):
         """
@@ -42,3 +42,32 @@ class Matcher:
 
         with open(dkd_filename, 'r') as file:
             self.documents = json.load(file)['documents']
+
+    def get_community_labels(self, labels_filename):
+        """
+        Read community labels from a file
+
+        Args:
+            labels_filename (str): The name of the file in which the community labels are stored.
+
+        Returns:
+            None
+        
+        Example:
+            >>> filename = 'labels.csv'
+            >>> matcher = Matcher()
+            >>> matcher.get_community_labels(filename)
+        
+        Note:
+            - The labels must be stored in a CSV file with the format of community ID, label.
+        """
+
+        with open(labels_filename, 'r', newline='') as file:
+            reader = csv.reader(file)
+            next(reader)
+
+            for row in reader:
+                community_id = row[0]
+                label = row[1]
+
+                self.labels[community_id] = label
