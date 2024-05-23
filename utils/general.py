@@ -118,9 +118,9 @@ def filter_values_by_dictionary(values, dictionary):
     Example:
     >>> my_dict = {'a': 1, 'b': 2, 'c': 3}
     >>> my_values = ['a', 'b', 'd', 'e']
-    >>> result = filter_values_by_dictionary(my_dict, my_values)
+    >>> result = filter_values_by_dictionary(my_values, my_dict)
     >>> print(result)
     ['a', 'b']
     """
-
+    print('values', values)
     return list(set(values) & set(dictionary.keys()))
