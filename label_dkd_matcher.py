@@ -2,6 +2,7 @@ import csv, json
 
 from os import getenv
 from text_embedder import TextEmbedder
+from utils.embeddings import calculate_average_similarity
 from utils.general import is_file_in_subdirectory
 
 class Matcher:
@@ -142,3 +143,31 @@ class Matcher:
             self._load_or_create_embeddings(label, LABELS_DIR, label_embeddings, model, use_openai)
         
         return document_embeddings, label_embeddings
+    
+
+    def compute_similarity_scores(self, model, use_openai):
+        """
+        Compute similarity scores between the documents from Domain Knowledge Definition file and the labels assigned to the communities.
+
+        Args:
+            model (str or SentenceTransformer): The name of the model if OpenAI is to be used or a SentenceTransformer model.
+            use_openai (bool): A flag indicating whether to use the OpenAI API to generate the embeddings. 
+                If True, the embeddings will be generated using OpenAI's model. If False, an alternative embedding method will be used. 
+        
+        Returns:
+            dict: A dictionary of dictionaries. The keys in the inner dictionary represents the community labels and the values represent the 
+                similarity score between that label and the key of the outer dictionary i.e, the documents.
+        """
+        
+        similarity_scores = {}
+        document_embeddings, label_embeddings = self._get_embeddings(model, use_openai)
+
+        for doc, doc_emb in document_embeddings.items():
+            temp_dict = {}
+            for label, label_emb in label_embeddings.items():
+                similarity_score = calculate_average_similarity([doc_emb, label_emb])
+                temp_dict[label] = similarity_score
+            similarity_scores[doc] = temp_dict
+
+        return similarity_scores          
+
