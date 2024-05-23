@@ -1,217 +1,115 @@
-import pandas as pd
+import csv
 import random
-import sys
-import tensorflow_hub as hub
-import time
 
-from community import community_louvain as cl
-from dotenv import load_dotenv
-from os import getenv, path
-
-from data_extractor import get_all_fks, get_table_names as get_table_names_p
 from db_connector import connect
-from mysql_data_extractor import get_all_foreign_key_relationships, get_table_names as get_table_names_m
+from dotenv import load_dotenv
+from community import community_louvain as cl
+from os import getenv
+from sentence_transformers import SentenceTransformer
 
-from community_labeler import labeler
-from connecting_node_mover import move_connecting_nodes
-from dkd_handler import calculate_similarities
-from serial_nodes_handler import detect_communities_in_node_series
+from community_graph import Graph
+
+from sub_graph_analyzer import SubGraphAnalyzer
+from label_dkd_matcher import Matcher
+from table_community import Community
+from utils.db import get_nodes_and_edges_from_db
 from utils.embeddings import get_embeddings_dict
-from utils.general import create_dict_from_df
-from utils.graph import arrange_nodes_in_series, convert_communities_list_to_partition, draw_graph, find_communities_connecting_nodes, get_edges, get_relevant_edges, \
-  group_nodes_by_community, initialize_graph, check_any_node_more_than_two_outgoing_edges
-from non_serial_nodes_handler import identify_additional_communities_by_edge_removal
-
-
-class ArgumentNotFoundError(Exception):
-    pass
+from utils.general import read_lines, reset_community_id_numbers
 
 if __name__ == '__main__':
-  total_time = 0
-  start_time = time.time()
-  
-  if len(sys.argv) > 1:
-    dkd_filename = sys.argv[1]
-  else:
-    raise ArgumentNotFoundError("Required DKD filename is not provided.")
+    load_dotenv()
 
-  load_dotenv()
+    DB_CONFIG_FILENAME = getenv('DB_CONFIG_FILENAME')
+    SECTION = getenv('SECTION')
+    RAW_DESCRIPTIONS_FILEPATH = getenv('RAW_DESCRIPTIONS_FILEPATH')
+    DB_NAME = getenv('DB_NAME')
+    MODEL = getenv('MODEL_NAME')
+    TRANSACTION_TABLES_ONLY = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
+    USE_OPENAI = False if getenv('USE_OPENAI').lower() in ['false', '0'] else True
+    OPENAI_MODEL = getenv('OPENAI_MODEL_NAME')
+
+    model = OPENAI_MODEL if USE_OPENAI else SentenceTransformer(MODEL)
+
+    preprocessed_texts = {}
+    embeddings_dict = {}
+    descriptions = {}
     
-  DB_CONFIG_FILENAME = getenv('DB_CONFIG_FILENAME')
-  SECTION = getenv('SECTION') 
-  DESCRIPTIONS_DIR = getenv('DESCRIPTIONS_DIR')
-  DESCRIPTIONS_FILENAME = getenv('DESCRIPTIONS_FILENAME')
-  MODEL_URL = getenv('MODEL_URL')
-  SIMILARITY_THRESHOLD = 0.6
-  EMBEDDINGS_DIR_NAME = getenv('EMBEDDINGS_DIR')
-  DKD_EMBEDDINGS_DIR_NAME = getenv('DKD_EMBEDDINGS_DIR')
-  LABELS_DIR_NAME = getenv('LABELS_DIR')
-  DKD_DIR_NAME = getenv('DKD_DIR')
-  DB_TYPE = getenv('DB_TYPE')
-  DB_NAME = getenv('DB_NAME')
-  
-  conn = connect(filename = DB_CONFIG_FILENAME, section = SECTION)
+    # Create embeddings of the descriptions
+    with open(RAW_DESCRIPTIONS_FILEPATH, 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Skip the header line
 
-  with conn:
-      cursor = conn.cursor()
+        for row in reader:
+            table_name = row[0]
+            description = row[1]
+            embeddings_dict = get_embeddings_dict(table_name, description, model, embeddings_dict, USE_OPENAI)
+            descriptions[table_name] = description
 
-      if DB_TYPE == 'postgres':
-        foreign_key_relation_list = get_all_fks(cursor)
-        nodes = [i[0] for i in get_table_names_p(cursor)]
-      elif DB_TYPE == 'mysql':
-        rows = get_table_names_m(conn, cursor, DB_NAME)
-        nodes = [i[0] for i in rows]
-        foreign_key_relation_list = get_all_foreign_key_relationships(conn, cursor, DB_NAME)
-
-  edges = [get_edges(i) for i in foreign_key_relation_list]
-
-  # Set a random seed for reproducibility
-  seed = 42
-  random.seed(seed)
-
-  G = initialize_graph(nodes, edges, directed=False)
-  
-  original_partition = cl.best_partition(G)
-  # partition = cl.best_partition(G, resolution=1.0)
-
-  # Example partition
-  # partition = {
-  #   'vbrk': 0, 'bkpf': 0, 'likp': 1, 'lips': 1, 'bseg': 0, 'vbak': 3, 
-  #   'vbap': 1, 'cdhdr': 2, 'nast': 3, 'cdpos': 2, 'vbfa': 1, 'vbrp': 0
-  #   }
-
-  print('Original partition: {0}'.format(original_partition))
-
-  end_time = time.time()
-  execution_time = end_time - start_time
-  total_time += execution_time
-  print('EXECUTION TIME 1', execution_time)
-
-  draw_graph(G, original_partition, title='Original Communities - Undirected - Louvain', color_map='Pastel1')
-
-  start_time = time.time()
-
-  # Arrange nodes by community and use that arrangement to get edges and their connecting nodes
-  nodes_by_community = group_nodes_by_community(original_partition)
-  communities_connecting_nodes = find_communities_connecting_nodes(G, nodes_by_community)
-
-  # Read descriptions file and create a dataframe 
-  descriptions_file_path = path.join(DESCRIPTIONS_DIR, DESCRIPTIONS_FILENAME)
-  df = pd.read_csv(descriptions_file_path)
-
-  # Create dictionary of descriptions
-  descriptions_dict = create_dict_from_df(df, key_col='tables', value_col='descriptions')
-  
-  # Load the embeddings model
-  model = hub.load(MODEL_URL)
-
-  # Get dictionary of embeddings
-  embeddings_dict = get_embeddings_dict(descriptions_dict, model, EMBEDDINGS_DIR_NAME)
-
-  # communities = {'vbrp': 0, 'vbrk': 0, 'bkpf': 1, 'bseg': 1, 'likp': 2, 'lips': 2, 'vbfa': 3, 'vbap': 3, 'vbak': 3, 'nast': 4, 'cdhdr': 5, 'cdpos': 5}
-  #parition = {'ekkn':0 ,'ekes':0,'eket':0,'ekbe':0,'ekko':0,'ekpo':0, 'eina':4, 'eine':4, 'mkpf':3, 'mseg':3, 'eord':5, 'bkpf':1, 'bseg':1, 'rbkp':1, 'rseg':1, 'eban':2, 'ebkn':2}
-  
-  modified_partition = move_connecting_nodes(original_partition, nodes_by_community, communities_connecting_nodes, embeddings_dict, SIMILARITY_THRESHOLD, G)
-  # Example modified_partition = {'vbrk': 0, 'bkpf': 0, 'likp': 1, 'lips': 1, 'bseg': 0, 'vbak': 1, 'vbap': 1, 'cdhdr': 2, 'nast': 3, 'cdpos': 2, 'vbfa': 1, 'vbrp': 0}
-  print('Modified partition after applying first arrangement: {0}'.format(modified_partition))
-
-  # Regroup the nodes by community
-  nodes_by_community = group_nodes_by_community(modified_partition)
-
-  # Divide the edges in lists of source and target nodes
-  sources = [node_group[0] for node_group in edges]
-  targets = [node_group[1] for node_group in edges]
-
-  node_chains = []
-
-  # Arrange the nodes in a proper series
-  nodes_have_more_than_two_outgoing_edges = check_any_node_more_than_two_outgoing_edges(edges, nodes_by_community)
-  
-  if nodes_have_more_than_two_outgoing_edges:
-    # If any node has more than two outgoing edges
-    temp_community_list = []
+    # Connect with the database
+    conn = connect(filename = DB_CONFIG_FILENAME, section = SECTION)
+    nodes, edges = get_nodes_and_edges_from_db(conn, db_type=SECTION, db_name=DB_NAME)
     
-    for community_id, nodes in nodes_by_community.items():
-      # similar_nodes = find_additional_communities(nodes, edges, SIMILARITY_THRESHOLD, embeddings_dict)
-      similar_nodes = identify_additional_communities_by_edge_removal(G, nodes, SIMILARITY_THRESHOLD, embeddings_dict)
-      temp_community_list.append(similar_nodes)
+    if TRANSACTION_TABLES_ONLY:
+        TRANSACTION_TABLES_FILENAME = getenv('TRANSACTION_TABLES_FILENAME')
+        nodes_to_keep = read_lines(TRANSACTION_TABLES_FILENAME)
+        
+        filtered_edges = [edge for edge in edges if all(node in nodes_to_keep for node in edge)]
+        nodes = nodes_to_keep
+        edges = filtered_edges
 
-    final_communities = [community for c in temp_community_list for community in c]
+    # Set a random seed for reproducibility
+    seed = 42
+    random.seed(seed)
 
-  else:
-    # If no node has more than two outgoing edges
+    G = Graph()
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
 
-    for community_id, nodes_in_community in nodes_by_community.items():
-      print('arranging node {0} in a series'.format(nodes_in_community))
-      if len(nodes_in_community) > 1:
-        # Get the central node and relevant edges from nodes in a community
-        # central_node = find_central_node(nodes, sources, targets, G, centrality_measure='betweenness')
-        relevant_edges = get_relevant_edges(nodes_in_community, edges)
+    original_partition = cl.best_partition(G)
 
-        # If there are more than one relevant edge, apply arrange_nodes_in_series to get a proper order of the nodes.
-        # Otherwise, append the nodes to node_chain. 
-        # Only one relevant chain means that there is only one edge that is represented by one tuple containing a source and a target node.
-        if len(relevant_edges) != 1:
-          nodes_in_series = arrange_nodes_in_series(relevant_edges)
-          node_chains.append(nodes_in_series)
-        else:
-          node_chains.append(nodes_in_community)
-      else:
-        node_chains.append(nodes_in_community)
+    community = Community(original_partition)
+    neighbor_count_of_connector_nodes = community.get_neighbor_count_of_connector_nodes(G, reverse=False)
     
-    # Loop through each chain in node_chains
-    # Example node_chains = [
-    #   ['vbrp', 'vbrk', 'bkpf', 'bseg'], 
-    #   ['likp', 'lips', 'vbfa', 'vbap', 'vbak'], 
-    #   ['cdhdr', 'cdpos'], 
-    #   ['nast']
-    # ]
-    nodes_in_new_communities = []
-    for chain in node_chains:
-      print('detecting community for {0}'.format(chain))
-      new_communities = detect_communities_in_node_series(chain, embeddings_dict, SIMILARITY_THRESHOLD)
-      nodes_in_new_communities.append(new_communities)
+    # Move the connector nodes
+    modified_partition = community.move_connector_nodes(G, embeddings_dict, check_neighboring_nodes_only=False)
+    modified_partition, count = reset_community_id_numbers(modified_partition)  # Reset the count of IDs so that all consecutive numbers are present 
+
+    modified_community = Community(modified_partition)
+    modified_nodes_by_community = modified_community.group_nodes_by_community()
     
-    # Example nodes_in_new_communities = [
-    #   [['vbrp', 'vbrk'], ['bkpf', 'bseg']], 
-    #   [['likp', 'lips'], ['vbfa'], ['vbap', 'vbak']], 
-    #   [['cdhdr', 'cdpos']], 
-    #   ['nast']
-    # ]
+    nodes = list(G.nodes())
+    edges = list(G.edges())
 
-    final_communities = [node for community in nodes_in_new_communities for node in community]
+    final_partition = []
+    count = 0
+
+    # Traverse through each community and find additional communities 
+    for community_id, nodes_to_include in modified_nodes_by_community.items():
+        filtered_edges = [edge for edge in edges if edge[0] in nodes_to_include and edge[1] in nodes_to_include]
+        subgraph = G.subgraph(nodes_to_include + [u for u, v in filtered_edges] + [v for u, v in filtered_edges])
+
+        subgraph_analyzer = SubGraphAnalyzer(subgraph)
+        partition = subgraph_analyzer.move(embeddings_dict)
+
+        partition, count = reset_community_id_numbers(partition, count) # Reset the count of IDs so that all consecutive numbers are present 
+        final_partition.append(partition)
+
+    final_partition_dict = {}
+    for i in final_partition:
+        final_partition_dict.update(i)
+
+    final_partition_dict, count = reset_community_id_numbers(final_partition_dict)  # Reset the count of IDs so that all consecutive numbers are present
+   
+    G.display_graph(final_partition_dict, save=False)
   
-  final_partition = convert_communities_list_to_partition(final_communities)
-  print('FINAL PARTITION', final_partition )
+    #converted_dict = {str(value): [key for key, val in final_partition_dict.items() if val == value] for value in set(final_partition_dict.values())}
+ 
+    DKD_DIR = getenv('DKD_DIR')
+    DKD_FILENAME = getenv('DKD_FILENAME')
+    COMMUNITY_LABELS_FILENAME = getenv('COMMUNITY_LABELS_FILENAME')
 
-  new_G = initialize_graph(nodes, edges, directed=False)
-
-  community_labels = labeler(final_partition, descriptions_dict)
-  # Example community_labels = {0: 'bill', 1: 'account', 2: 'sd delivery', 3: 'sale', 4: 'message status', 5: 'change'}
-
-  end_time = time.time()
-  execution_time = end_time - start_time
-  total_time += execution_time
-  print('EXECUTION TIME 2', execution_time)
-
-  draw_graph(new_G, final_partition, title='Modified Communities - Undirected - Louvain', labels= community_labels, color_map='Pastel1')
-
-  start_time = time.time()
-
-  # DKD Handling
-  dkd_file_path = path.join(DKD_DIR_NAME, dkd_filename)
-
-  sim_score_df = calculate_similarities(community_labels, model, dkd_file_path, DKD_EMBEDDINGS_DIR_NAME, LABELS_DIR_NAME)
-  sorted_df = sim_score_df.sort_values(by=['document', 'similarity_score'], ascending=[True, False])
-
-  print('Document-Label Matching')
-  print(sorted_df)
-
-  end_time = time.time()
-  execution_time = end_time - start_time
-  total_time += execution_time
-  print('EXECUTION TIME 3', execution_time)
-
-  print('TOTAL TIME', total_time)
-
-  
+    matcher = Matcher()
+    matcher.get_documents_from_dkd(DKD_DIR + '/' + DKD_FILENAME)
+    matcher.get_community_labels(COMMUNITY_LABELS_FILENAME)
+    similarity_scores = matcher.compute_similarity_scores(model, USE_OPENAI)
+    print(similarity_scores)
