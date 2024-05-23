@@ -6,7 +6,7 @@ from text_embedder import TextEmbedder
 from text_preprocessor import TextPreprocessor
 from utils.general import is_file_in_subdirectory, read_lines
 
-def get_embeddings_dict(table_name, description, model, embeddings_dict):
+def get_embeddings_dict(table_name, description, model, embeddings_dict, use_openai):
     """
     Create a dictionary of embeddings with table (node) name as the key and its embeddings as the value.
 
@@ -29,7 +29,7 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict):
     COMMON_TERMS_FILENAME = getenv('COMMON_TERMS_FILENAME')
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
-    USE_OPENAI = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
+    # USE_OPENAI = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
 
     embeddings_filename = '{0}_embeddings.npy'.format(table_name)
 
@@ -48,7 +48,7 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict):
             preprocessed_texts[table_name] = preprocessed_text
             embedder = TextEmbedder(preprocessed_text, model)
             
-        embeddings = embedder.create_embeddings(use_openai=USE_OPENAI)
+        embeddings = embedder.create_embeddings(use_openai)
         embedder.save_embeddings(embeddings, EMBEDDINGS_DIR, embeddings_filename)
     
     embeddings_dict[table_name] = embeddings
