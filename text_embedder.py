@@ -69,6 +69,11 @@ class TextEmbedder:
             )
 
             embeddings = response.data[0].embedding
+            
+            Embed4All
+            embedder = Embed4All()
+            embeddings = embedder.embed(self.text)
+
         else:
             embeddings = self.model.encode(self.text, convert_to_tensor=True)
         return embeddings
