@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 from os import getenv
 from sentence_transformers import SentenceTransformer
 
+import igraph as ig
+import networkx as nx
+
 from community_graph import Graph
 from sub_graph_analyzer import SubGraphAnalyzer
 from label_dkd_matcher import Matcher
@@ -60,12 +63,28 @@ if __name__ == '__main__':
     seed = 42
     random.seed(seed)
 
+    G_igraph = ig.Graph()
+    G_igraph.add_vertices(nodes)
+    G_igraph.add_edges(edges)
+
+    community = Community({})
+    communities = community.get_communities(G_igraph, algorithm=COMMUNITY_DETECTION_ALGORITHM)
+
+    original_partition = {node['name']: membership for node, membership in zip(G_igraph.vs, communities.membership)}
+
+    # Convert igraph to networkx
     G = Graph()
-    G.add_nodes_from(nodes)
-    G.add_edges_from(edges)
 
-    original_partition = cl.best_partition(G)
+    # Add nodes with community membership as an attribute
+    for node in G_igraph.vs:
+        G.add_node(node['name'], community=original_partition[node['name']])
 
+    # Add edges to the networkx graph
+    for edge in G_igraph.es:
+        source, target = edge.tuple
+        G.add_edge(G_igraph.vs[source]['name'], G_igraph.vs[target]['name'])
+    G.display_graph(original_partition)
+    
     community = Community(original_partition)
     neighbor_count_of_connector_nodes = community.get_neighbor_count_of_connector_nodes(G, reverse=False)
     

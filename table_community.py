@@ -240,3 +240,43 @@ class Community:
 
         self.neighbor_count_by_connector_nodes = dict(sorted(neighbor_count.items(), key=lambda item: item[1], reverse = reverse))
         return self.neighbor_count_by_connector_nodes
+
+    def get_communities(self, G, algorithm='multilevel'):
+        """
+        Detects communities in a graph using the specified community detection algorithm.
+
+        Args:
+            G (networkx.Graph): A NetworkX graph object on which community detection will be performed.
+            algorithm (str, optional, default='multilevel'): The community detection algorithm to use. Options include:
+                - 'edge_betweenness': Uses edge betweenness centrality to detect communities. Requires specifying the number of communities.
+                - 'fastgreedy': Uses the fast greedy algorithm for community detection.
+                - 'infomap': Uses the Infomap algorithm for detecting communities.
+                - 'label_propagation': Uses the Label Propagation algorithm for community detection.
+                - 'leading_eigenvector': Uses the leading eigenvector algorithm for community detection.
+                - 'multilevel': Uses the Multilevel algorithm for community detection.
+                - 'spinglass': Uses the Spinglass algorithm for community detection.
+                - 'walktrap': Uses the Walktrap algorithm for community detection.
+
+        Returns:
+            communities: A community clustering object representing the detected communities in the graph. The exact type and methods available will depend on the algorithm used.
+        
+        Notes:
+            - For the 'edge_betweenness' algorithm, the number of communities is fixed at 3 in this implementation. 
+        """
+        
+        algorithm_map = {
+            'edge_betweenness': lambda: G.community_edge_betweenness().as_clustering(3),  # Example for fixed num_communities
+            'fastgreedy': lambda: G.community_fastgreedy().as_clustering(),
+            'infomap': lambda: G.community_infomap(),
+            'label_propagation': lambda: G.community_label_propagation(),
+            'leading_eigenvector': lambda: G.community_leading_eigenvector(),
+            'multilevel': lambda: G.community_multilevel(),
+            'spinglass': lambda: G.community_spinglass(),
+            'walktrap': lambda: G.community_walktrap().as_clustering()
+        }
+        
+        # Default to 'multilevel' if the provided algorithm is not in the map
+        if algorithm not in algorithm_map:
+            algorithm = 'multilevel'
+        
+        return algorithm_map[algorithm]()
