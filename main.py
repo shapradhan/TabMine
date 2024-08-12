@@ -29,6 +29,8 @@ if __name__ == '__main__':
     TRANSACTION_TABLES_ONLY = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
     USE_OPENAI = False if getenv('USE_OPENAI').lower() in ['false', '0'] else True
     OPENAI_MODEL = getenv('OPENAI_MODEL_NAME')
+    SIMILARITY_MEASURE = getenv('SIMILARITY_MEASURE')
+    COMMUNITY_DETECTION_ALGORITHM = getenv('COMMUNITY_DETECTION_ALGORITHM')
 
     model = OPENAI_MODEL if USE_OPENAI else SentenceTransformer(MODEL)
 
@@ -89,9 +91,9 @@ if __name__ == '__main__':
     neighbor_count_of_connector_nodes = community.get_neighbor_count_of_connector_nodes(G, reverse=False)
     
     # Move the connector nodes
-    modified_partition = community.move_connector_nodes(G, embeddings_dict, check_neighboring_nodes_only=False)
+    modified_partition = community.move_connector_nodes(G, embeddings_dict, SIMILARITY_MEASURE, check_neighboring_nodes_only=False)
     modified_partition, count = reset_community_id_numbers(modified_partition)  # Reset the count of IDs so that all consecutive numbers are present 
-
+    G.display_graph(modified_partition)
     modified_community = Community(modified_partition)
     modified_nodes_by_community = modified_community.group_nodes_by_community()
     
@@ -107,7 +109,7 @@ if __name__ == '__main__':
         subgraph = G.subgraph(nodes_to_include + [u for u, v in filtered_edges] + [v for u, v in filtered_edges])
 
         subgraph_analyzer = SubGraphAnalyzer(subgraph)
-        partition = subgraph_analyzer.move(embeddings_dict)
+        partition = subgraph_analyzer.move(embeddings_dict, SIMILARITY_MEASURE)
 
         partition, count = reset_community_id_numbers(partition, count) # Reset the count of IDs so that all consecutive numbers are present 
         final_partition.append(partition)
@@ -122,12 +124,12 @@ if __name__ == '__main__':
   
     #converted_dict = {str(value): [key for key, val in final_partition_dict.items() if val == value] for value in set(final_partition_dict.values())}
  
-    DKD_DIR = getenv('DKD_DIR')
-    DKD_FILENAME = getenv('DKD_FILENAME')
+    DOCUMENT_LIST_DIR = getenv('DOCUMENT_LIST_DIR')
+    DOCUMENT_LIST_FILENAME = getenv('DOCUMENT_LIST_FILENAME')
     COMMUNITY_LABELS_FILENAME = getenv('COMMUNITY_LABELS_FILENAME')
 
     matcher = Matcher()
-    matcher.get_documents_from_dkd(DKD_DIR + '/' + DKD_FILENAME)
+    matcher.get_documents_from_dkd(DOCUMENT_LIST_DIR + '/' + DOCUMENT_LIST_FILENAME)
     matcher.get_community_labels(COMMUNITY_LABELS_FILENAME)
-    similarity_scores = matcher.compute_similarity_scores(model, USE_OPENAI)
+    similarity_scores = matcher.compute_similarity_scores(model, SIMILARITY_MEASURE, USE_OPENAI)
     print(similarity_scores)

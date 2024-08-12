@@ -145,7 +145,7 @@ class Matcher:
         return document_embeddings, label_embeddings
     
 
-    def compute_similarity_scores(self, model, use_openai):
+    def compute_similarity_scores(self, model, similarity_measure, use_openai):
         """
         Compute similarity scores between the documents from Domain Knowledge Definition file and the labels assigned to the communities.
 
@@ -165,7 +165,7 @@ class Matcher:
         for doc, doc_emb in document_embeddings.items():
             temp_dict = {}
             for label, label_emb in label_embeddings.items():
-                similarity_score = calculate_average_similarity([doc_emb, label_emb])
+                similarity_score = calculate_average_similarity([doc_emb, label_emb], similarity_measure)
                 temp_dict[label] = similarity_score
             similarity_scores[doc] = temp_dict
 

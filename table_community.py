@@ -161,7 +161,7 @@ class Community:
         
         return partition
 
-    def move_connector_nodes(self, graph, embeddings_dict, check_neighboring_nodes_only=False):
+    def move_connector_nodes(self, graph, embeddings_dict, similarity_measure, check_neighboring_nodes_only=False):
         """
         Identify the connector nodes and moves them 
 
@@ -178,7 +178,7 @@ class Community:
         partition = self.partition
 
         for node in self.neighbor_count_by_connector_nodes:
-            highest_similarity_score = 0
+            highest_similarity_score = -1   # Handles both cases where minimum is -1 and 0
             
             node_original_community_id = partition[node]
             max_value_key = max(partition, key=partition.get)
@@ -189,7 +189,7 @@ class Community:
                 
                 for neighbor in neighbors:
                     embeddings_to_check = [embeddings_dict[node], embeddings_dict[neighbor]]
-                    avg_similarity_score = calculate_average_similarity(embeddings_to_check)
+                    avg_similarity_score = calculate_average_similarity(embeddings_to_check, similarity_measure)
         
                     if avg_similarity_score > highest_similarity_score:
                         highest_similarity_score = avg_similarity_score
@@ -206,7 +206,7 @@ class Community:
                         nodes_in_neghboring_community.append(node)   # Add the node to check if adding it in the neighboring communities makes the score go higher
 
                     embeddings = [embeddings_dict[node] for node in nodes_in_neghboring_community]
-                    avg_similarity_score = calculate_average_similarity(embeddings)
+                    avg_similarity_score = calculate_average_similarity(embeddings, similarity_measure)
                     
                     if avg_similarity_score > highest_similarity_score:
                         highest_similarity_score = avg_similarity_score

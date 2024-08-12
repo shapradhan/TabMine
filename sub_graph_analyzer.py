@@ -161,7 +161,7 @@ class SubGraphAnalyzer:
         return similarity_score, neighbor, partition.get(neighbor, count)
 
 
-    def move(self, embeddings_dict):
+    def move(self, embeddings_dict, similarity_measure):
         """
         Move the nodes in a subgraph to additional communities.
 
@@ -192,7 +192,7 @@ class SubGraphAnalyzer:
             current_node = node_with_degree[0]
             neighbors_of_current_node = list(self.graph.neighbors(current_node))
 
-            highest_similarity_score = 0
+            highest_similarity_score = -1
             most_similar_neighbor = None
             most_similar_community = None
 
@@ -222,7 +222,7 @@ class SubGraphAnalyzer:
                     # and calculate the similarity score between the current node and that other node.
                     if len(embeddings) == 1:
                         embeddings = self._modify_embeddings(current_node, embeddings, embeddings_dict, arranged_nodes)
-                        similarity_score_with_current_node = calculate_average_similarity(embeddings)
+                        similarity_score_with_current_node = calculate_average_similarity(embeddings, similarity_measure)
 
                         if similarity_score_with_current_node > highest_similarity_score:
                             highest_similarity_score, most_similar_neighbor, most_similar_community = self._update_similarity_score(similarity_score_with_current_node, neighbor, partition, count) 
@@ -232,9 +232,10 @@ class SubGraphAnalyzer:
                     # If the similarity score is higher with the current node being present in the community, then identify the highest similarity score,
                     # the most similar node, and the most similar community.
                     elif len(embeddings) > 1:
-                        similarity_score_without_current_node = calculate_average_similarity(embeddings)
+                        similarity_score_without_current_node = calculate_average_similarity(embeddings, similarity_measure)
                         embeddings = self._modify_embeddings(current_node, embeddings, embeddings_dict, arranged_nodes)
-                        similarity_score_with_current_node = calculate_average_similarity(embeddings)
+ 
+                        similarity_score_with_current_node = calculate_average_similarity(embeddings, similarity_measure)
                         difference = similarity_score_with_current_node - similarity_score_without_current_node
 
                         if difference > 0 and similarity_score_with_current_node > highest_similarity_score:
