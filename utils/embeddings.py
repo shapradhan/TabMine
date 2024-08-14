@@ -130,7 +130,7 @@ def calculate_average_similarity(embeddings, similarity_measure="cosine_similari
 
     if similarity_measure == 'cosine_similarity' or similarity_measure == 'dot_product':
         total_similarity = (np.sum(similarity_matrix) / 2) - (embeddings_length / 2)   # Exclude diagonal values (similarity to itself)
-    elif similarity_measure == 'euclidean_distance' or similarity_measure == 'manhatten':
+    elif similarity_measure == 'euclidean_distance' or similarity_measure == 'manhattan_distance':
         total_similarity = (np.sum(similarity_matrix) / 2)
 
     average_similarity = total_similarity / num_pairs
