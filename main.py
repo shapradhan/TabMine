@@ -8,7 +8,6 @@ from os import getenv
 from sentence_transformers import SentenceTransformer
 
 import igraph as ig
-import networkx as nx
 
 from community_graph import Graph
 from sub_graph_analyzer import SubGraphAnalyzer
