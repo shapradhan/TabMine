@@ -3,6 +3,22 @@ import networkx as nx
 import os
 
 class Graph(nx.Graph):
+    """
+    A custom Graph class that extends the NetworkX Graph class.
+
+    This class inherits from `networkx.Graph` and allows to create and manipulate 
+    undirected graphs with optional additional functionality.
+
+    Args:
+        *args (tuple, optional): Positional arguments passed to the `networkx.Graph` constructor.
+        **kwargs (dict, optional): Keyword arguments passed to the `networkx.Graph` constructor.
+
+    Attributes:
+        All attributes of `networkx.Graph` are available.
+
+    Methods:
+        All methods of `networkx.Graph` are available.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
@@ -75,3 +91,35 @@ class Graph(nx.Graph):
             os.startfile(file_path)
         else:
             plt.show()
+    
+    def convert_igraph_to_networkx_graph(self, G_igraph, partition):
+        """
+        Converts an igraph graph into a NetworkX graph, preserving community information.
+
+        This method takes an igraph graph `G_igraph` and converts it into a NetworkX graph,
+        adding nodes and edges accordingly. Each node in the NetworkX graph is annotated 
+        with a `community` attribute based on the provided `partition` dictionary.
+
+        Args:
+            G_igraph (igraph.Graph): The igraph graph that is to be converted into a NetworkX graph.
+            partition (dict):A dictionary where keys are node names from `G_igraph` and values are community 
+                identifiers. This information is added as a `community` attribute to each node in the NetworkX graph.
+
+        Returns:
+            None: This method modifies the current NetworkX graph in place by adding nodes and edges from `G_igraph`.
+        
+        Notes:
+            - The method assumes that nodes in `G_igraph` have a 'name' attribute that is used as their identifier.
+            - The edges are added based on the connections in `G_igraph` without any additional attributes.
+        """
+        
+        # Add nodes with community membership as an attribute
+        for node in G_igraph.vs:
+            # G_nx.add_node(node['name'], community=partition[node['name']])
+            self.add_node(node['name'], community=partition[node['name']])
+
+        # Add edges to the networkx graph
+        for edge in G_igraph.es:
+            source, target = edge.tuple
+            self.add_edge(G_igraph.vs[source]['name'], G_igraph.vs[target]['name'])
+            

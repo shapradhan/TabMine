@@ -76,15 +76,7 @@ if __name__ == '__main__':
 
     # Convert igraph to networkx
     G = Graph()
-
-    # Add nodes with community membership as an attribute
-    for node in G_igraph.vs:
-        G.add_node(node['name'], community=original_partition[node['name']])
-
-    # Add edges to the networkx graph
-    for edge in G_igraph.es:
-        source, target = edge.tuple
-        G.add_edge(G_igraph.vs[source]['name'], G_igraph.vs[target]['name'])
+    G.convert_igraph_to_networkx_graph(G_igraph, original_partition)
     G.display_graph(original_partition)
     
     community = Community(original_partition)
@@ -121,8 +113,6 @@ if __name__ == '__main__':
     final_partition_dict, count = reset_community_id_numbers(final_partition_dict)  # Reset the count of IDs so that all consecutive numbers are present
    
     G.display_graph(final_partition_dict, save=False)
-  
-    #converted_dict = {str(value): [key for key, val in final_partition_dict.items() if val == value] for value in set(final_partition_dict.values())}
  
     DOCUMENT_LIST_DIR = getenv('DOCUMENT_LIST_DIR')
     DOCUMENT_LIST_FILENAME = getenv('DOCUMENT_LIST_FILENAME')
