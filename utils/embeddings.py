@@ -1,12 +1,58 @@
 import numpy as np
 from os import getenv
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances, pairwise_distances
-
 from text_embedder import TextEmbedder
 from text_preprocessor import TextPreprocessor
 from utils.general import is_file_in_subdirectory, read_lines
 
-def get_embeddings_dict(table_name, description, model, embeddings_dict, use_openai):
+def get_embeddings_filename(table_name, preprocessing_options):
+    """
+    Constructs the filename for the embeddings based on preprocessing options.
+
+    Args:
+        table_name (str): The base name for the embeddings file.
+        preprocessing_options (dict): A dictionary with preprocessing options.
+            - 'raw_description' (bool): Whether to include raw description.
+            - 'stopwords' (bool): Whether stopwords were removed.
+            - 'punctuations' (bool): Whether punctuation was removed.
+            - 'lemmatizing' (bool): Whether lemmatization was applied.
+
+    Returns:
+        str: The constructed filename for the embeddings.
+    
+    Example:
+        >>> preprocessing_options = {
+        ...     'raw_description': False,
+        ...     'stopwords': True,
+        ...     'punctuations': True,
+        ...     'lemmatizing': False
+        ... }
+        >>> table_name = 'my_table'
+        >>> get_embeddings_filename(table_name, preprocessing_options)
+        'my_table_embeddings_stopwords_punctuations.npy'
+    """
+    
+    # Start with the base filename
+    parts = [table_name + '_embeddings']
+
+    # Append suffixes based on preprocessing options
+    if preprocessing_options.get('raw_description', False):
+        parts.append('raw')
+    else:
+        if preprocessing_options.get('stopwords', False):
+            parts.append('stopwords')
+        if preprocessing_options.get('punctuations', False):
+            parts.append('punctuations')
+        if preprocessing_options.get('lemmatizing', False):
+            parts.append('lemmatizing')
+
+    # Join parts and add file extension
+    embeddings_filename = '_'.join(parts) + '.npy'
+
+    return embeddings_filename
+
+
+def get_embeddings_dict(table_name, description, model, embeddings_dict, preprocessing_options, use_openai):
     """
     Create a dictionary of embeddings with table (node) name as the key and its embeddings as the value.
 
@@ -29,8 +75,8 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, use_ope
     COMMON_TERMS_FILENAME = getenv('COMMON_TERMS_FILENAME')
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
-    
-    embeddings_filename = '{0}_embeddings.npy'.format(table_name)
+
+    embeddings_filename = get_embeddings_filename(table_name, preprocessing_options)
 
     if is_file_in_subdirectory(DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename):
         embedder = TextEmbedder()
@@ -38,12 +84,12 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, use_ope
     else:
         if TABLE_NAME_INCLUDED:
             description = table_name + " " + description
-            
-        if PROCESS_RAW:
+        
+        if preprocessing_options['raw_description']:
             embedder = TextEmbedder(description, model)
         else:
             common_terms = read_lines(COMMON_TERMS_FILENAME)
-            preprocessed_text = TextPreprocessor(description).preprocess(common_terms, POS_TAGGED, NOUNS_ONLY)
+            preprocessed_text = TextPreprocessor(description).preprocess(preprocessing_options, common_terms, POS_TAGGED, NOUNS_ONLY)
             preprocessed_texts[table_name] = preprocessed_text
             embedder = TextEmbedder(preprocessed_text, model)
             
