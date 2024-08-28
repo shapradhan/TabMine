@@ -9,6 +9,7 @@ Endpoints:
 import csv
 import igraph as ig
 import mysql.connector
+import os
 import random
 
 from dotenv import load_dotenv
@@ -36,15 +37,15 @@ app.config['ALLOWED_EXTENSIONS'] = {'csv', 'json'}
 
 # MySQL connection configuration from environment variables
 db_config = {
-    'host': getenv('MYSQL_HOST'),
-    'user': getenv('MYSQL_USER'),
-    'password': getenv('MYSQL_PASSWORD'),
-    'port': getenv('MYSQL_PORT')
+    'host': os.getenv('MYSQL_HOST'),
+    'user': os.getenv('MYSQL_USER'),
+    'password': os.getenv('MYSQL_PASSWORD'),
+    'port': os.getenv('MYSQL_PORT')
 }
 
 # Ensure upload directory exists
-UPLOAD_FOLDER = getenv('UPLOAD_FOLDER')
-makedirs(UPLOAD_FOLDER, exist_ok=True)
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     """Check if the file extension is allowed."""
@@ -111,11 +112,11 @@ def submit_data():
 
     conn = mysql.connector.connect(**db_config)
 
-    SECTION = getenv('SECTION')
-    MODEL = getenv('MODEL_NAME')
-    TRANSACTION_TABLES_ONLY = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
-    USE_OPENAI = False if getenv('USE_OPENAI').lower() in ['false', '0'] else True
-    OPENAI_MODEL = getenv('OPENAI_MODEL_NAME')
+    SECTION = os.getenv('SECTION')
+    MODEL = os.getenv('MODEL_NAME')
+    TRANSACTION_TABLES_ONLY = False if os.getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
+    USE_OPENAI = False if os.getenv('USE_OPENAI').lower() in ['false', '0'] else True
+    OPENAI_MODEL = os.getenv('OPENAI_MODEL_NAME')
 
     model = OPENAI_MODEL if USE_OPENAI else SentenceTransformer(MODEL)
 
@@ -134,9 +135,9 @@ def submit_data():
             descriptions[table_name] = description
     nodes, edges = get_nodes_and_edges_from_db(conn, db_type=SECTION, db_name=database)
 
-    TRANSACTION_TABLES_ONLY = False if getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
+    TRANSACTION_TABLES_ONLY = False if os.getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
     if TRANSACTION_TABLES_ONLY:
-        TRANSACTION_TABLES_FILENAME = getenv('TRANSACTION_TABLES_FILENAME')
+        TRANSACTION_TABLES_FILENAME = os.getenv('TRANSACTION_TABLES_FILENAME')
         nodes_to_keep = read_lines(TRANSACTION_TABLES_FILENAME)
         
         filtered_edges = [edge for edge in edges if all(node in nodes_to_keep for node in edge)]
@@ -151,7 +152,7 @@ def submit_data():
     G_igraph.add_vertices(nodes)
     G_igraph.add_edges(edges)
     
-    # COMMUNITY_DETECTION_ALGORITHM = getenv('COMMUNITY_DETECTION_ALGORITHM')
+    # COMMUNITY_DETECTION_ALGORITHM = os.getenv('COMMUNITY_DETECTION_ALGORITHM')
     community = Community({})
     # communities = community.get_communities(G_igraph, algorithm=COMMUNITY_DETECTION_ALGORITHM)
     communities = community.get_communities(G_igraph, algorithm=community_detection_algorithm)
@@ -198,7 +199,7 @@ def submit_data():
    
     G.display_graph(final_partition_dict, save=False)
  
-    COMMUNITY_LABELS_FILENAME = getenv('COMMUNITY_LABELS_FILENAME')
+    COMMUNITY_LABELS_FILENAME = os.getenv('COMMUNITY_LABELS_FILENAME')
 
     matcher = Matcher()
     matcher.get_documents_from_dkd('uploads/data_documents.json')
