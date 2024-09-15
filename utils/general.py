@@ -1,14 +1,14 @@
-import os, re
+import os, re, csv
 
 def make_subdirectory(subdirectory_name):
     """
     Create a new sub directory with the specified name within the current directory.
 
     Args:
-    subdirectory_name (str): The name of the subdirectory to be created.
+        - subdirectory_name (str): The name of the subdirectory to be created.
 
     Returns:
-        bool: True if a sub directory is successfully created, Otherwise, False.
+        - bool: True if a sub directory is successfully created, Otherwise, False.
     """
 
     if not os.path.exists(subdirectory_name):
@@ -22,10 +22,10 @@ def reset_community_id_numbers(partition, count=0):
     Reset the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
     
     Args:
-        partition (dict): A dictionary representing a partition where keys are nodes and values are community IDs.
+        - partition (dict): A dictionary representing a partition where keys are nodes and values are community IDs.
     
     Returns:
-        dict: A dictionary representing a partition where the community IDs have been reset and starts incrementally from 0.
+        - dict: A dictionary representing a partition where the community IDs have been reset and starts incrementally from 0.
 
     Example:
         >>> partition = {'A': 7, 'B': 18, 'C': 7, 'D': 5}
@@ -50,12 +50,12 @@ def extract_substring_between_strings(text, start_str, end_str):
     Extract the substring located between two specified strings in the given text.
 
     Args:
-        text (str): The input text from which the word will be extracted.
-        start_str (str): The starting string marking the beginning of the target word.
-        end_str (str): The ending string marking the end of the target word.
+        - text (str): The input text from which the word will be extracted.
+        - start_str (str): The starting string marking the beginning of the target word.
+        - end_str (str): The ending string marking the end of the target word.
 
     Returns:
-        str or None: The substring between start_str and end_str if found, or None if not found.
+        - str or None: The substring between start_str and end_str if found, or None if not found.
     
     Example:
         >>> get_substring_between_strings('gobbledygook', 'ob', 'go')
@@ -73,11 +73,11 @@ def is_file_in_subdirectory(subdirectory_name, filename):
     Check if a file with a given filename is in a sub directory within the current direction,
 
     Args:
-        subdirectory_name (str): The name of the sub directory.
-        filename (str): The name of the file that needs to be checked in the sub directory.
+        - subdirectory_name (str): The name of the sub directory.
+        - filename (str): The name of the file that needs to be checked in the sub directory.
     
     Returns:
-        bool: True if the file is in the sub directory, Otherwise, False.
+        - bool: True if the file is in the sub directory, Otherwise, False.
     
     Example:
         >>> is_file_in_subdirectory('subdir', 'file.txt')
@@ -92,10 +92,10 @@ def read_lines(filename):
     Read lines from a text file and return them as a list.
 
     Args:
-        filename (str): The path to the text file.
+        - filename (str): The path to the text file.
 
     Returns:
-        list: A list containing the lines read from the text file.
+        - list: A list containing the lines read from the text file.
 
     Example:
         >>> lines = read_lines('example.txt')
@@ -126,4 +126,26 @@ def filter_values_by_dictionary(values, dictionary):
     return list(set(values) & set(dictionary.keys()))
 
 def to_boolean(value):
+    """
+    Convert a string or value to a boolean.
+
+    Args:
+        - value (str): The value to be converted to a boolean. This value should be a string that can be interpreted as a boolean. Common representations include 'true', 'false', '1', '0', and their variations in different cases.
+
+    Returns:
+        - bool: Returns `True` if the input value is not 'false' or '0' (case-insensitive). Otherwise, returns `False`.
+
+    Example:
+        >>> to_boolean('true')
+        True
+        >>> to_boolean('False')
+        False
+        >>> to_boolean('0')
+        False
+        >>> to_boolean('1')
+        True
+        >>> to_boolean('yes')
+        True
+    """
+
     return value not in ['false', '0']
