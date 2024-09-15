@@ -5,35 +5,37 @@ from text_embedder import TextEmbedder
 from text_preprocessor import TextPreprocessor
 from utils.general import is_file_in_subdirectory, read_lines
 
-def get_embeddings_filename(table_name, model, preprocessing_options):
+def _get_embeddings_folder_name(model, preprocessing_options):
     """
-    Constructs the filename for the embeddings based on preprocessing options.
+    Generate a folder name for storing embeddings based on the model and preprocessing options.
 
     Args:
-        table_name (str): The base name for the embeddings file.
-        preprocessing_options (dict): A dictionary with preprocessing options.
-            - 'raw_description' (bool): Whether to include raw description.
-            - 'stopwords' (bool): Whether stopwords were removed.
-            - 'punctuations' (bool): Whether punctuation was removed.
-            - 'lemmatizing' (bool): Whether lemmatization was applied.
+        model (str): The name or identifier of the model used for generating embeddings. This string will be prefixed to the folder name.
+        preprocessing_options (dict): A dictionary of preprocessing options that affect the folder name. The dictionary can contain the following keys:
+            - 'raw_description' (bool): If `True`, includes 'raw' in the folder name to indicate no preprocessing.
+            - 'stopwords' (bool): If `True`, includes 'stopwords' in the folder name to indicate that stopwords removal was applied.
+            - 'punctuations' (bool): If `True`, includes 'punctuations' in the folder name to indicate that punctuation removal was applied.
+            - 'lemmatizing' (bool): If `True`, includes 'lemmatizing' in the folder name to indicate that lemmatization was applied.
 
     Returns:
-        str: The constructed filename for the embeddings.
-    
+        str: A string representing the folder name for storing embeddings, constructed based on the provided model and preprocessing options.
+
     Example:
-        >>> preprocessing_options = {
-        ...     'raw_description': False,
-        ...     'stopwords': True,
-        ...     'punctuations': True,
-        ...     'lemmatizing': False
-        ... }
-        >>> table_name = 'my_table'
-        >>> get_embeddings_filename(table_name, preprocessing_options)
-        'my_table_embeddings_stopwords_punctuations.npy'
+        >>> get_embeddings_folder_name('bert', {'raw_description': True})
+        'embeddings_bert_raw'
+        
+        >>> get_embeddings_folder_name('word2vec', {'stopwords': True, 'punctuations': True})
+        'embeddings_word2vec_stopwords_punctuations'
+        
+        >>> get_embeddings_folder_name('gpt', {'lemmatizing': True})
+        'embeddings_gpt_lemmatizing'
+        
+        >>> get_embeddings_folder_name('fasttext', {})
+        'embeddings_fasttext'
     """
-    
-    # Start with the base filename
-    parts = [table_name + '_embeddings_' + model]
+
+    # Start with the base folder name
+    parts = ['embeddings_' + model]
 
     # Append suffixes based on preprocessing options
     if preprocessing_options.get('raw_description', False):
@@ -46,10 +48,10 @@ def get_embeddings_filename(table_name, model, preprocessing_options):
         if preprocessing_options.get('lemmatizing', False):
             parts.append('lemmatizing')
 
-    # Join parts and add file extension
-    embeddings_filename = '_'.join(parts) + '.npy'
+    # Join parts
+    embeddings_folder_name = '_'.join(parts)
 
-    return embeddings_filename
+    return embeddings_folder_name
 
 
 def get_embeddings_dict(table_name, description, model, embeddings_dict, preprocessing_options, use_openai):
@@ -76,11 +78,13 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, preproc
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
 
-    embeddings_filename = get_embeddings_filename(table_name, model, preprocessing_options)
+    embeddings_filename = table_name + '_embeddings.npy'
+    embeddings_folder_name = _get_embeddings_folder_name(model, preprocessing_options)
+    embeddings_dir_full_path = DESCRIPTION_EMBEDDINGS_DIR + '/' + embeddings_folder_name
 
-    if is_file_in_subdirectory(DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename):
+    if is_file_in_subdirectory(embeddings_dir_full_path, embeddings_filename):
         embedder = TextEmbedder()
-        embeddings = embedder.load_embeddings_from_file(DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename)
+        embeddings = embedder.load_embeddings_from_file(embeddings_dir_full_path, embeddings_filename)
     else:
         if TABLE_NAME_INCLUDED:
             description = table_name + " " + description
@@ -88,13 +92,13 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, preproc
         if preprocessing_options['raw_description']:
             embedder = TextEmbedder(description, model)
         else:
-            common_terms = read_lines(COMMON_TERMS_FILENAME)
-            preprocessed_text = TextPreprocessor(description).preprocess(preprocessing_options, common_terms, POS_TAGGED, NOUNS_ONLY)
+            # common_terms = read_lines(COMMON_TERMS_FILENAME)
+            preprocessed_text = TextPreprocessor(description).preprocess(preprocessing_options, POS_TAGGED, NOUNS_ONLY)
             preprocessed_texts[table_name] = preprocessed_text
             embedder = TextEmbedder(preprocessed_text, model)
             
-        embeddings = embedder.create_embeddings(use_openai)
-        embedder.save_embeddings(embeddings, DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename)
+        embeddings = embedder.create_embeddings()
+        embedder.save_embeddings(embeddings, embeddings_dir_full_path, embeddings_filename)
     
     embeddings_dict[table_name] = embeddings
     return embeddings_dict
@@ -127,13 +131,13 @@ def _compute_similarity_matrix(embeddings, similarity_measure="cosine_similarity
     similarity_map = {
         'cosine_similarity': lambda: cosine_similarity(embeddings),
         'euclidean_distance': lambda: euclidean_distances(embeddings),
-        'manhatten': lambda: pairwise_distances(embeddings, metric='cityblock'),
+        'manhattan_distance': lambda: pairwise_distances(embeddings, metric='cityblock'),
         'dot_product': lambda: np.dot(embeddings, embeddings.T)
     }
     
     if similarity_measure not in similarity_map:
         raise ValueError(f"Unsupported similarity_measure: '{similarity_measure}'. "
-                         "Supported measures are: 'cosine_similarity', 'euclidean_distance', 'manhatten', 'dot_product'.")
+                         "Supported measures are: 'cosine_similarity', 'euclidean_distance', 'manhattan_distance', 'dot_product'.")
     
     # Execute the corresponding function
     return similarity_map[similarity_measure]()
