@@ -24,7 +24,7 @@ from label_dkd_matcher import Matcher
 from table_community import Community
 from utils.db import get_nodes_and_edges_from_db
 from utils.embeddings import get_embeddings_dict
-from utils.general import read_lines, reset_community_id_numbers, to_boolean
+from utils.general import read_lines, reset_community_id_numbers, to_boolean, create_csv_from_text, calculate_max_tokens
 
 
 # Load environment variables from .env file
@@ -88,16 +88,6 @@ def submit_data():
     similarity_measure = request.form.get('similarityMeasure')
     llm = request.form.get('llm')
     
-    # raw_description = to_boolean(request.form.get('rawDescription'))
-    # punctuations = to_boolean(request.form.get('punctuations'))
-    # stopwords = to_boolean(request.form.get('stopwords'))
-    # lemmatizing = to_boolean(request.form.get('lemmatizing'))
-
-    # raw_description = False if request.form.get('rawDescription') in ['false', '0'] else True
-    # punctuations = False if request.form.get('punctuations') in ['false', '0'] else True
-    # stopwords = False if request.form.get('stopwords') in ['false', '0'] else True
-    # lemmatizing = False if request.form.get('lemmatizing') in ['false', '0'] else True
-    # print('here', to_boolean(request.form.get('rawDescription')))
     preprocessing_options = {
         'raw_description': to_boolean(request.form.get('rawDescription')),
         'punctuations': to_boolean(request.form.get('punctuations')),
@@ -145,13 +135,11 @@ def submit_data():
         for row in reader:
             table_name = row[0]
             description = row[1]
-            # if punctuations:
-            #     description = description.translate(str.maketrans('', '', string.punctuation))
-            print('inside row reader')
+
             embeddings_dict = get_embeddings_dict(table_name, description, model, embeddings_dict, preprocessing_options, USE_OPENAI)
             descriptions[table_name] = description
     nodes, edges = get_nodes_and_edges_from_db(conn, db_type=SECTION, db_name=database)
-
+  
     TRANSACTION_TABLES_ONLY = False if os.getenv('TRANSACTION_TABLES_ONLY').lower() in ['false', '0'] else True
     if TRANSACTION_TABLES_ONLY:
         TRANSACTION_TABLES_FILENAME = os.getenv('TRANSACTION_TABLES_FILENAME')
@@ -175,7 +163,7 @@ def submit_data():
     communities = community.get_communities(G_igraph, algorithm=community_detection_algorithm)
  
     original_partition = {node['name']: membership for node, membership in zip(G_igraph.vs, communities.membership)}
-    
+
     # Convert igraph to networkx
     G = Graph()
     G.convert_igraph_to_networkx_graph(G_igraph, original_partition)
@@ -222,10 +210,6 @@ def submit_data():
     matcher = Matcher()
     matcher.get_documents_from_dkd('uploads/data_documents.json')
 
-    prompt = """We have these names and descriptions of the nodes in the given communities,
-        respectively. What term can be given to each community so that it has a common
-        theme based on the node names and descriptions? \n"""
-    
     # Create a dictionary to hold communities
     communities = {}
 
@@ -235,41 +219,42 @@ def submit_data():
             communities[community] = []
         communities[community].append(f"{key}: {descriptions[key]}")
 
+
+    prompt = """We have these names and descriptions of the nodes in the given communities,
+        respectively. What term can be given to each community so that it has a common
+        theme based on the node names and descriptions? \n"""
+    
     # Print the result
     for community, items in communities.items():
         prompt = prompt + f"Community {community}:\n"
         prompt = prompt + ", ".join(items) + "\n"
-        # print(f"Community {community}:")
-        # print(", ".join(items))
-        # print()  # Blank line for spacing between communities
     
     prompt = prompt + """For each of these communities listed above, please provide me with a meaningful label. 
         Use one or two words per label.
         Do not give the same label more than once. 
         Your answer must be of the form: \nCommunity 0: label0 \nCommunity 1: label1 \netc """
-    print(prompt)   
 
     client = AzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY2"),  
-    api_version="2024-02-01",
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT2")
+        api_key=os.getenv("AZURE_OPENAI_API_KEY2"),  
+        api_version="2024-02-01",
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT2")
     )
     
     deployment_name=os.getenv("OPENAI_MODEL_NAME2")
-    response = client.completions.create(model=deployment_name, prompt=prompt, max_tokens=100, temperature=0)
-    response_text = response.choices[0].text
-    print("response text")
-    print(response_text)
-    # print([prompt]+response.choices[0].text)
+    max_tokens = calculate_max_tokens(len(communities))
+    completition_response = client.completions.create(model=deployment_name, prompt=prompt, max_tokens=max_tokens, temperature=0, )
+    response_text = completition_response.choices[0].text
+    response_text = create_csv_from_text(response_text)
 
     matcher.get_community_labels(COMMUNITY_LABELS_FILENAME)
-    similarity_scores = matcher.compute_similarity_scores(model, similarity_measure, USE_OPENAI)
-    # response['similarity_scores'] = similarity_scores
-    # response['nodes'] = nodes
-    # response['edges'] = edges
-    # response['communities'] = final_partition_dict
-    return 
-    # return jsonify({'status': 'success', 'data': response}), 200
+    similarity_scores = matcher.compute_similarity_scores(model, similarity_measure)
+    
+    response['similarity_scores'] = similarity_scores
+    response['nodes'] = nodes
+    response['edges'] = edges
+    response['communities'] = final_partition_dict
+
+    return jsonify({'status': 'success', 'data': response}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)
