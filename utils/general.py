@@ -124,3 +124,6 @@ def filter_values_by_dictionary(values, dictionary):
     """
 
     return list(set(values) & set(dictionary.keys()))
+
+def to_boolean(value):
+    return value not in ['false', '0']

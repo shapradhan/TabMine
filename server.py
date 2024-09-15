@@ -15,8 +15,8 @@ import random
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from os import getenv, makedirs
 from sentence_transformers import SentenceTransformer
+from openai import AzureOpenAI
 
 from community_graph import Graph
 from sub_graph_analyzer import SubGraphAnalyzer
@@ -24,7 +24,7 @@ from label_dkd_matcher import Matcher
 from table_community import Community
 from utils.db import get_nodes_and_edges_from_db
 from utils.embeddings import get_embeddings_dict
-from utils.general import read_lines, reset_community_id_numbers
+from utils.general import read_lines, reset_community_id_numbers, to_boolean
 
 
 # Load environment variables from .env file
@@ -80,17 +80,30 @@ def submit_data():
     Returns:
         JSON response confirming receipt of the data.
     """
-    
+
     database = request.form.get('database')
     data_dictionary = request.files.get('data_dictionary')
     document_objects = request.files.get('document_objects')
     community_detection_algorithm = request.form.get('communityAlgorithm')
     similarity_measure = request.form.get('similarityMeasure')
     llm = request.form.get('llm')
-    raw_description = request.form.get('rawDescription')
-    punctuations = request.form.get('punctuations')
-    stopwords = request.form.get('stopwords')
-    stemming = request.form.get('stemming')
+    
+    # raw_description = to_boolean(request.form.get('rawDescription'))
+    # punctuations = to_boolean(request.form.get('punctuations'))
+    # stopwords = to_boolean(request.form.get('stopwords'))
+    # lemmatizing = to_boolean(request.form.get('lemmatizing'))
+
+    # raw_description = False if request.form.get('rawDescription') in ['false', '0'] else True
+    # punctuations = False if request.form.get('punctuations') in ['false', '0'] else True
+    # stopwords = False if request.form.get('stopwords') in ['false', '0'] else True
+    # lemmatizing = False if request.form.get('lemmatizing') in ['false', '0'] else True
+    # print('here', to_boolean(request.form.get('rawDescription')))
+    preprocessing_options = {
+        'raw_description': to_boolean(request.form.get('rawDescription')),
+        'punctuations': to_boolean(request.form.get('punctuations')),
+        'stopwords': to_boolean(request.form.get('stopwords')),
+        'lemmatizing': to_boolean(request.form.get('lemmatizing'))
+    }
 
     response = {}
 
@@ -118,7 +131,8 @@ def submit_data():
     USE_OPENAI = False if os.getenv('USE_OPENAI').lower() in ['false', '0'] else True
     OPENAI_MODEL = os.getenv('OPENAI_MODEL_NAME')
 
-    model = OPENAI_MODEL if USE_OPENAI else SentenceTransformer(MODEL)
+    # model = OPENAI_MODEL if USE_OPENAI else SentenceTransformer(MODEL)
+    model = llm
 
     embeddings_dict = {}
     descriptions = {}
@@ -131,7 +145,10 @@ def submit_data():
         for row in reader:
             table_name = row[0]
             description = row[1]
-            embeddings_dict = get_embeddings_dict(table_name, description, model, embeddings_dict, USE_OPENAI)
+            # if punctuations:
+            #     description = description.translate(str.maketrans('', '', string.punctuation))
+            print('inside row reader')
+            embeddings_dict = get_embeddings_dict(table_name, description, model, embeddings_dict, preprocessing_options, USE_OPENAI)
             descriptions[table_name] = description
     nodes, edges = get_nodes_and_edges_from_db(conn, db_type=SECTION, db_name=database)
 
@@ -163,14 +180,14 @@ def submit_data():
     G = Graph()
     G.convert_igraph_to_networkx_graph(G_igraph, original_partition)
 
-    G.display_graph(original_partition)
+    # G.display_graph(original_partition)
     
     community = Community(original_partition)
     
     # Move the connector nodes
     modified_partition = community.move_connector_nodes(G, embeddings_dict, similarity_measure, check_neighboring_nodes_only=False)
     modified_partition, count = reset_community_id_numbers(modified_partition)  # Reset the count of IDs so that all consecutive numbers are present 
-    G.display_graph(modified_partition)
+    # G.display_graph(modified_partition)
     modified_community = Community(modified_partition)
     modified_nodes_by_community = modified_community.group_nodes_by_community()
     
@@ -197,17 +214,62 @@ def submit_data():
 
     final_partition_dict, count = reset_community_id_numbers(final_partition_dict)  # Reset the count of IDs so that all consecutive numbers are present
    
-    G.display_graph(final_partition_dict, save=False)
+    # G.display_graph(final_partition_dict, save=False)
+    print('final_partition_dict', final_partition_dict)
  
     COMMUNITY_LABELS_FILENAME = os.getenv('COMMUNITY_LABELS_FILENAME')
 
     matcher = Matcher()
     matcher.get_documents_from_dkd('uploads/data_documents.json')
+
+    prompt = """We have these names and descriptions of the nodes in the given communities,
+        respectively. What term can be given to each community so that it has a common
+        theme based on the node names and descriptions? \n"""
+    
+    # Create a dictionary to hold communities
+    communities = {}
+
+    # Group items based on the value in dict1
+    for key, community in final_partition_dict.items():
+        if community not in communities:
+            communities[community] = []
+        communities[community].append(f"{key}: {descriptions[key]}")
+
+    # Print the result
+    for community, items in communities.items():
+        prompt = prompt + f"Community {community}:\n"
+        prompt = prompt + ", ".join(items) + "\n"
+        # print(f"Community {community}:")
+        # print(", ".join(items))
+        # print()  # Blank line for spacing between communities
+    
+    prompt = prompt + """For each of these communities listed above, please provide me with a meaningful label. 
+        Use one or two words per label.
+        Do not give the same label more than once. 
+        Your answer must be of the form: \nCommunity 0: label0 \nCommunity 1: label1 \netc """
+    print(prompt)   
+
+    client = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY2"),  
+    api_version="2024-02-01",
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT2")
+    )
+    
+    deployment_name=os.getenv("OPENAI_MODEL_NAME2")
+    response = client.completions.create(model=deployment_name, prompt=prompt, max_tokens=100, temperature=0)
+    response_text = response.choices[0].text
+    print("response text")
+    print(response_text)
+    # print([prompt]+response.choices[0].text)
+
     matcher.get_community_labels(COMMUNITY_LABELS_FILENAME)
     similarity_scores = matcher.compute_similarity_scores(model, similarity_measure, USE_OPENAI)
-    response['similarity_scores'] = similarity_scores
-
-    return jsonify({'status': 'success', 'data': response}), 200
+    # response['similarity_scores'] = similarity_scores
+    # response['nodes'] = nodes
+    # response['edges'] = edges
+    # response['communities'] = final_partition_dict
+    return 
+    # return jsonify({'status': 'success', 'data': response}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
