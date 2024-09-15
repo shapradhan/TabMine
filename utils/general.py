@@ -149,3 +149,30 @@ def to_boolean(value):
     """
 
     return value not in ['false', '0']
+
+
+def create_csv_from_text(response_text, filename='communities_labels.csv'):
+    """
+    Create a CSV file from a given text containing community labels.
+
+    Args:
+        - response_text (str): The input text containing community and label information.
+        - filename (str): The name of the CSV file to be created.
+    """
+
+    # Extract community and label using regex
+    matches = re.findall(r'#Community (\d+): (\w+)', response_text)
+
+    # Remove duplicates by converting to a set and back to a list
+    unique_matches = list(set(matches))
+
+    # Sort by community
+    unique_matches.sort(key=lambda x: int(x[0]))
+
+    # Write to CSV
+    with open(filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['community', 'label'])  # Write header
+        writer.writerows(unique_matches)  # Write data
+
+    print(f"CSV file '{filename}' has been created successfully.")
