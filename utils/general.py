@@ -176,3 +176,36 @@ def create_csv_from_text(response_text, filename='communities_labels.csv'):
         writer.writerows(unique_matches)  # Write data
 
     print(f"CSV file '{filename}' has been created successfully.")
+
+def calculate_max_tokens(num_communities, max_words_per_label=2, avg_tokens_per_word=2, buffer=20):
+    """
+    Calculate the maximum number of tokens required for a response.
+
+    Args:
+        - num_communities (int): The number of communities to include in the response.
+        - max_words_per_label (int): The maximum number of words in each label (default is 2).
+        - avg_tokens_per_word (int): The average number of tokens per word (default is 2).
+        - buffer (int): Additional tokens to add as a buffer (default is 20).
+
+    Returns:
+        - int: The estimated maximum number of tokens needed.
+    """
+    # Tokens for static part of each line: "Community X: "
+    static_tokens_per_line = len("Community X: ")
+
+    # Tokens for each label
+    tokens_per_label = max_words_per_label * avg_tokens_per_word
+
+    # Tokens for each newline character
+    newline_tokens = 1
+
+    # Calculate tokens per line
+    tokens_per_line = static_tokens_per_line + tokens_per_label + newline_tokens
+
+    # Total tokens for all communities
+    total_tokens = tokens_per_line * num_communities
+
+    # Add buffer tokens
+    total_tokens += buffer
+
+    return total_tokens
