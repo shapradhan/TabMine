@@ -5,7 +5,7 @@ from text_embedder import TextEmbedder
 from text_preprocessor import TextPreprocessor
 from utils.general import is_file_in_subdirectory, read_lines
 
-def get_embeddings_filename(table_name, preprocessing_options):
+def get_embeddings_filename(table_name, model, preprocessing_options):
     """
     Constructs the filename for the embeddings based on preprocessing options.
 
@@ -33,7 +33,7 @@ def get_embeddings_filename(table_name, preprocessing_options):
     """
     
     # Start with the base filename
-    parts = [table_name + '_embeddings']
+    parts = [table_name + '_embeddings_' + model]
 
     # Append suffixes based on preprocessing options
     if preprocessing_options.get('raw_description', False):
@@ -76,7 +76,7 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, preproc
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
 
-    embeddings_filename = get_embeddings_filename(table_name, preprocessing_options)
+    embeddings_filename = get_embeddings_filename(table_name, model, preprocessing_options)
 
     if is_file_in_subdirectory(DESCRIPTION_EMBEDDINGS_DIR, embeddings_filename):
         embedder = TextEmbedder()
