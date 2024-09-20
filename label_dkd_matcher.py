@@ -77,6 +77,7 @@ class Matcher:
                 label = row[1]
 
                 self.labels[community_id] = label
+        return self.labels
         
     
     def _load_or_create_embeddings(self, text, dir, embeddings_dict, model):
