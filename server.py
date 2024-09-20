@@ -246,13 +246,14 @@ def submit_data():
     response_text = completition_response.choices[0].text
     response_text = create_csv_from_text(response_text)
 
-    matcher.get_community_labels(COMMUNITY_LABELS_FILENAME)
+    labels = matcher.get_community_labels(COMMUNITY_LABELS_FILENAME)
     similarity_scores = matcher.compute_similarity_scores(model, similarity_measure)
     
     response['similarity_scores'] = similarity_scores
     response['nodes'] = nodes
     response['edges'] = edges
     response['communities'] = final_partition_dict
+    response['labels'] = labels
 
     return jsonify({'status': 'success', 'data': response}), 200
 
