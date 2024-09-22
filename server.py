@@ -15,6 +15,7 @@ import random
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import psycopg2
 from sentence_transformers import SentenceTransformer
 from openai import AzureOpenAI
 
@@ -37,10 +38,19 @@ app.config['ALLOWED_EXTENSIONS'] = {'csv', 'json'}
 
 # MySQL connection configuration from environment variables
 db_config = {
+db_config_mysql = {
     'host': os.getenv('MYSQL_HOST'),
     'user': os.getenv('MYSQL_USER'),
     'password': os.getenv('MYSQL_PASSWORD'),
     'port': os.getenv('MYSQL_PORT')
+}
+
+db_config_postgres = {
+    'host': os.getenv('POSTGRES_HOST'),
+    'user': os.getenv('POSTGRES_USER'),
+    'password': os.getenv('POSTGRES_PASSWORD'),
+    'port': os.getenv('POSTGRES_PORT'),
+    'dbname': 'postgres'
 }
 
 # Ensure upload directory exists
@@ -55,20 +65,39 @@ def allowed_file(filename):
 @app.route('/databases', methods=['GET'])
 def get_databases():
     """
-    Retrieve the list of databases from the MySQL server.
-
+    Retrieve the list of databases from the MySQL or PostgreSQL server,
+    depending on the 'dbType' query parameter.
+    
+    Query Params:
+        dbType: The type of the database, either 'mysql' or 'postgresql'.
+    
     Returns:
         JSON response containing the list of databases or an error message.
     """
+    db_type = request.args.get('dbType')  # Get database type from query param
+    if db_type not in ['mysql', 'postgresql']:
+        return jsonify({'error': 'Invalid dbType. Must be either "mysql" or "postgresql".'}), 400
+
     try:
-        connection = mysql.connector.connect(**db_config)
-        cursor = connection.cursor()
-        cursor.execute('SHOW DATABASES')
-        databases = [db[0] for db in cursor.fetchall()]
+        # Connect to the appropriate database based on dbType
+        if db_type == 'mysql':
+            connection = mysql.connector.connect(**db_config_mysql)
+            cursor = connection.cursor()
+            cursor.execute('SHOW DATABASES')
+            databases = [db[0] for db in cursor.fetchall()]
+        elif db_type == 'postgresql':
+            connection = psycopg2.connect(**db_config_postgres)
+            cursor = connection.cursor()
+            cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
+            databases = [db[0] for db in cursor.fetchall()]
+
+        # Close the connection
         cursor.close()
         connection.close()
+
         return jsonify(databases), 200
-    except mysql.connector.Error as err:
+
+    except (mysql.connector.Error, psycopg2.Error) as err:
         print(f'Error: {err}')
         return jsonify({'error': str(err)}), 500
 
