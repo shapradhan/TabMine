@@ -1,4 +1,5 @@
 from utils.embeddings import calculate_average_similarity
+from community_graph import Graph
 
 class Community:
     def __init__(self, partition):
@@ -122,99 +123,241 @@ class Community:
 
         return [node for node, comm_id in self.partition.items() if comm_id == community_id]
 
-    def _move(self, graph, node, node_original_community_id, community_to_move_to, max_community_id):
-        """
-        Retrieves the nodes in a given community and moves the node to a the community with community ID = community_to_move_to
+    def _get_max_community_id(self, partition):
+        """Retrieves the maximum community ID from the partition.
 
         Args:
-            graph (networkx.Graph): The graph representing the relationships between the tables.
-            node (str): The connector node that has to be moved.
-            node_original_community_id (int): The ID of the community in which the node was originally in.
-            community_to_move_to (int): The ID of the community to which the node has to be moved.
-            max_community_id (int): The maximum ID value which is in the original partition.
+            partition (dict): A dictionary where the keys are node identifiers 
+                            and the values are integers representing community IDs.
 
         Returns:
-            dict: A modified partition in which the node has been moved to a different community, if required. 
-                The keys represent the nodes and the values represent the community ID.
+            int: The maximum community ID found in the partition.
+
+        Raises:
+            ValueError: If the partition contains non-integer values.
+            TypeError: If the maximum community ID is not an integer.
+        """
         
+        # Ensure that partition stores integer values representing community IDs
+        if not all(isinstance(v, int) for v in partition.values()):
+            raise ValueError("Partition should only contain integer community IDs.")
+        
+        max_value_key = max(partition, key=partition.get)  # Get the key with the maximum value
+        max_community_id = partition[max_value_key]  # The maximum community ID should be an integer
+        
+        # Check if the result is an integer, raise error if not
+        if not isinstance(max_community_id, int):
+            raise TypeError("max_community_id is expected to be an integer.")
+        
+        return max_community_id
+
+    def _get_filtered_neighboring_communities(self, graph, node, node_original_community_id):
+        """Retrieves neighboring communities for a given node, excluding its original community.
+
+        This method first fetches the neighboring communities of the specified node 
+        and then filters out the community that the node originally belongs to.
+
+        Args:
+            graph (networkx.Graph): The graph representing the relationships between the nodes.
+            node (str): The identifier of the node for which neighboring communities are to be found.
+            node_original_community_id (int): The community ID of the node's original community, which will be excluded from the results.
+
+        Returns:
+            list: A list of community IDs representing the neighboring communities, excluding the original community ID.
+        """
+        
+        neighboring_communities = self._get_neighboring_communities(graph, node)
+    
+        # Filter out the original community ID from neighboring communities
+        neighboring_communities = [community_id for community_id in neighboring_communities if community_id != node_original_community_id]
+        return neighboring_communities
+
+    def _calculate_similarity_for_original_community(self, node, node_original_community_id, embeddings_dict, similarity_measure):
+        """Calculates the similarity scores for a given node within its original community.
+
+        This method computes the similarity score between the connector node and the nodes in its original community,
+        both with and without the connector node included in the calculation. If the original community contains
+        two or fewer nodes, the similarity score without the connector node will be the same as the score with it.
+
+        Args:
+            node (str): The identifier of the connector node.
+            node_original_community_id (int): The community ID of the original community where the node resides.
+            embeddings_dict (dict): A dictionary mapping node identifiers to their corresponding embeddings.
+            similarity_measure (callable): A function to calculate the similarity score between embeddings.
+
+        Returns:
+            tuple: A tuple containing two elements:
+                - float: The similarity score with the connector node included.
+                - float: The similarity score without the connector node included.
+        """
+        
+        nodes_in_original_community = self._get_nodes_by_community_id(node_original_community_id)
+        
+        # Calculate similarity score with the connector node
+        embeddings_original = [embeddings_dict[n] for n in nodes_in_original_community]
+        sim_score_with_connector_in_original = calculate_average_similarity(embeddings_original, similarity_measure)
+
+        # Handle the case where the original community has more than 2 nodes
+        if len(nodes_in_original_community) > 2:
+            nodes_in_original_community.remove(node)
+            embeddings_without_connector_original = [embeddings_dict[n] for n in nodes_in_original_community]
+            sim_score_without_connector_in_original = calculate_average_similarity(embeddings_without_connector_original, similarity_measure)
+        else:
+            sim_score_without_connector_in_original = sim_score_with_connector_in_original
+
+        return sim_score_with_connector_in_original, sim_score_without_connector_in_original
+    
+    def _try_move_node_to_neighboring_community(self, node, node_original_community_id, neighboring_communities, 
+                                            partition, embeddings_dict, sim_score_with_connector_in_original, 
+                                            sim_score_without_connector_in_original, similarity_measure, max_community_id):
+        """
+        Attempts to move a connector node from its original community to one of its neighboring communities based on
+        similarity score comparisons. If moved, the function ensures that nodes remaining in the original community 
+        remain connected and updates the partition accordingly.
+
+        The node is moved if:
+        - The similarity score of the original community improves by removing the node.
+        - The similarity score of the neighboring community improves by adding the node.
+
+        Args:
+            node (any hashable type): The connector node being evaluated for movement.
+            node_original_community_id (int): The ID of the original community to which the node belongs.
+            neighboring_communities (list of int): A list of community IDs that are adjacent to the node's original community.
+            partition (dict): A dictionary where keys are nodes and values are their community IDs, representing the partitioning of nodes.
+            embeddings_dict (dict): A dictionary where keys are nodes and values are their embeddings (vector representations).
+            sim_score_with_connector_in_original (float): The similarity score of the original community with the connector node included.
+            sim_score_without_connector_in_original (float): The similarity score of the original community without the connector node.
+            similarity_measure (callable): A function or method to compute similarity between nodes based on their embeddings.
+            max_community_id (int): The current highest community ID in the partitioning, used to assign new communities if nodes are disconnected.
+
+        Returns:
+            bool: True if the node was moved to a neighboring community, False if it was not moved.
+            int: The updated maximum community ID, which might change if disconnected nodes are split into new communities.
+
+        Behavior:
+            - If the node is moved to a neighboring community, the partition is updated with the new community assignment.
+            - After moving, checks if the remaining nodes in the original community are still connected. If they are disconnected,
+            the function assigns each disconnected group to a new community and updates `max_community_id`.
+            - If the node is not moved, the function returns without modifying the partition or `max_community_id`.
+        """
+
+        for community_id in neighboring_communities:
+            nodes_in_neighboring_community = self._get_nodes_by_community_id(community_id)
+
+            # Calculate similarity score for the neighboring community with the connector node
+            nodes_with_connector = nodes_in_neighboring_community + [node]
+            embeddings_neighboring_with_connector = [embeddings_dict[n] for n in nodes_with_connector]
+            sim_score_with_connector_in_neighbor = calculate_average_similarity(embeddings_neighboring_with_connector, similarity_measure)
+
+            # Handle the case where the neighboring community has more than 1 node
+            if len(nodes_in_neighboring_community) > 1:
+                embeddings_without_connector_neighbor = [embeddings_dict[n] for n in nodes_in_neighboring_community]
+                sim_score_without_connector_in_neighbor = calculate_average_similarity(embeddings_without_connector_neighbor, similarity_measure)
+            else:
+                sim_score_without_connector_in_neighbor = sim_score_with_connector_in_neighbor
+
+            print('sim_score_with_connector_in_neighbor:', sim_score_with_connector_in_neighbor)
+            print('sim_score_without_connector_in_neighbor:', sim_score_without_connector_in_neighbor)
+
+            # Check if the node should be moved to this neighboring community
+            if (sim_score_without_connector_in_original > sim_score_with_connector_in_original and
+                    sim_score_with_connector_in_neighbor > sim_score_without_connector_in_neighbor):
+                print(f'Moving node {node} from community {node_original_community_id} to {community_id}.')
+                partition[node] = community_id  # Update the node's community ID
+
+                # After moving, check if the remaining nodes in the original community are still connected
+                nodes_in_original_community = [n for n in partition if partition[n] == node_original_community_id]
+                
+                G = Graph()
+                max_community_id = G.check_and_split_disconnected_nodes(nodes_in_original_community, partition, max_community_id)
+
+                return True, max_community_id  # Node was moved, return updated max_community_id
+
+        return False, max_community_id  # Node was not moved, return max_community_id unchanged
+
+
+    def _place_node_in_separate_community(self, node, partition, sim_score_with_connector_in_original, sim_score_without_connector_in_original):
+        """Places a node in a separate community if similarity conditions are met.
+
+        This method evaluates whether a node should be placed in a separate community 
+        based on its similarity scores with and without the node included in the original community. 
+        If the condition is met, a new community ID is assigned to the node.
+
+        Args:
+            node (str): The identifier of the node being considered for placement.
+            partition (dict): A dictionary where keys are node identifiers and values are community IDs.
+            sim_score_with_connector_in_original (float): The similarity score of the original community 
+                                                        with the node included.
+            sim_score_without_connector_in_original (float): The similarity score of the original community 
+                                                            without the node included.
+
+        Returns:
+            None: Updates the partition in place by either assigning a new community ID or 
+                keeping the node in its original community.
+        """
+        # Calculate the maximum community ID from the current partition
+        max_community_id = max(partition.values()) if partition else 0  # Handle the case when partition is empty
+
+        # Check if the node should be placed in a separate community
+        if sim_score_with_connector_in_original < sim_score_without_connector_in_original:
+            new_community_id = max_community_id + 1  # Assign a new community ID
+            print(f'Putting node {node} in a separate community with ID {new_community_id}.')
+            partition[node] = new_community_id  # Assign the new community ID
+        else:
+            print(f'Node {node} will stay in the original community {partition[node]}.')
+
+
+    def move_connector_nodes(self, graph, embeddings_dict, similarity_measure):
+        """Moves connector nodes between communities based on similarity scores and community structure.
+
+        This method iterates through connector nodes and attempts to move each one to a neighboring community 
+        if certain similarity conditions are met. If the node should not stay in its current community or move 
+        to a neighboring one, it is placed in a separate community. The partition is updated based on the 
+        movements and similarity evaluations.
+
+        Args:
+            graph (networkx.Graph): The graph representing the relationships between nodes (e.g., tables).
+            embeddings_dict (dict): A dictionary mapping node identifiers to their corresponding embeddings.
+            similarity_measure (str): The similarity measure used to calculate similarity scores (e.g., 'cosine', 'euclidean').
+
+        Returns:
+            dict: Updated partition dictionary where keys are node identifiers and values are community IDs.
+
         Note:
-            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
+            - This method evaluates nodes using the similarity score of their embeddings both within their original 
+            community and in neighboring communities. If a node doesn't fit well in its original or neighboring 
+            communities, it may be placed in a new community.
         """
 
         partition = self.partition
-
-        # Gets all nodes in the original community from the partition
-        nodes_in_community = [node for node, community_id in partition.items() if community_id == node_original_community_id]
-        
-        # Remove the connector node from its original community if it has to be moved to a different community
-        if community_to_move_to != node_original_community_id and node in nodes_in_community:
-            nodes_in_community = [x for x in nodes_in_community if x != node]
-
-        partition[node] = community_to_move_to
-        connected_components = graph.get_connected_components(nodes_in_community)
-
-        if connected_components:
-            for group in connected_components:
-                for node in group:
-                    partition[node] = max_community_id + 1
-                max_community_id = max_community_id + 1
-        
-        return partition
-
-    def move_connector_nodes(self, graph, embeddings_dict, similarity_measure, check_neighboring_nodes_only=False):
-        """
-        Identify the connector nodes and moves them 
-
-        Args:
-            graph (networkx.Graph): The graph representing the relationships between the tables.
-            embeddings_dict (dict): A dictionary with table names as they key and its embeddings as the value.
-            check_neighboring_nodes_only (Boolean): A value indicating whether the algorithm should just check for neighboring nodes when comparing 
-                or neighboring communities instead. Defaults to False, indicating the check should be of the entire neighboring communities. 
-        
-        Returns:
-            dict: A dictionary in which the keys represent the table names and the values represent the ID of community in which the tables belong.
-        """
-        
-        partition = self.partition
+        max_community_id = self._get_max_community_id(partition)  # Initialize max_community_id once at the start
 
         for node in self.neighbor_count_by_connector_nodes:
-            highest_similarity_score = -1   # Handles both cases where minimum is -1 and 0
-            
+            # Get the original community and neighboring communities
             node_original_community_id = partition[node]
-            max_value_key = max(partition, key=partition.get)
-            max_community_id = partition[max_value_key]
+            neighboring_communities = self._get_filtered_neighboring_communities(graph, node, node_original_community_id)
 
-            if check_neighboring_nodes_only:
-                neighbors = list(graph.neighbors(node))
-                
-                for neighbor in neighbors:
-                    embeddings_to_check = [embeddings_dict[node], embeddings_dict[neighbor]]
-                    avg_similarity_score = calculate_average_similarity(embeddings_to_check, similarity_measure)
-        
-                    if avg_similarity_score > highest_similarity_score:
-                        highest_similarity_score = avg_similarity_score
-                        community_to_move_to = partition[neighbor]
+            # Calculate similarity scores for the original community
+            sim_score_with_connector_in_original, sim_score_without_connector_in_original = self._calculate_similarity_for_original_community(
+                node, node_original_community_id, embeddings_dict, similarity_measure)
 
-                partition = self._move(graph, node, node_original_community_id, community_to_move_to, max_community_id)
-            
-            else:
-                neighboring_communities = self._get_neighboring_communities(graph, node) # Includes current community of the node as well
-               
-                for community_id in neighboring_communities: 
-                    nodes_in_neghboring_community = self._get_nodes_by_community_id(community_id)
-                    if node not in nodes_in_neghboring_community:
-                        nodes_in_neghboring_community.append(node)   # Add the node to check if adding it in the neighboring communities makes the score go higher
+            print('sim_score_with_connector_in_original:', sim_score_with_connector_in_original)
+            print('sim_score_without_connector_in_original:', sim_score_without_connector_in_original)
 
-                    embeddings = [embeddings_dict[node] for node in nodes_in_neghboring_community]
-                    avg_similarity_score = calculate_average_similarity(embeddings, similarity_measure)
-                    
-                    if avg_similarity_score > highest_similarity_score:
-                        highest_similarity_score = avg_similarity_score
-                        community_to_move_to = community_id
+            # Try moving the node to a neighboring community
+            node_moved, max_community_id = self._try_move_node_to_neighboring_community(
+                node, node_original_community_id, neighboring_communities, partition, embeddings_dict,
+                sim_score_with_connector_in_original, sim_score_without_connector_in_original, similarity_measure, max_community_id)
 
-                partition = self._move(graph, node, node_original_community_id, community_to_move_to, max_community_id)
+            # If the node was moved, skip the rest
+            if node_moved:
+                continue
+
+            # If the node should go to a separate community
+            self._place_node_in_separate_community(node, partition, sim_score_with_connector_in_original, sim_score_without_connector_in_original)
+
         return partition
-
+    
     def get_neighbor_count_of_connector_nodes(self, graph, reverse=False):
         """
         Counts the number of neighboring nodes of the connector nodes in a graph
