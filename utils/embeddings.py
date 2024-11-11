@@ -1,11 +1,13 @@
 import numpy as np
+
 from os import getenv
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances, pairwise_distances
+
 from text_embedder import TextEmbedder
 from text_preprocessor import TextPreprocessor
-from utils.general import is_file_in_subdirectory, read_lines
+from utils.general import is_file_in_subdirectory
 
-def _get_embeddings_folder_name(model, preprocessing_options):
+def _get_embeddings_folder_name(preprocessing_options):
     """
     Generate a folder name for storing embeddings based on the model and preprocessing options.
 
@@ -35,7 +37,7 @@ def _get_embeddings_folder_name(model, preprocessing_options):
     """
 
     # Start with the base folder name
-    parts = ['embeddings_' + model]
+    parts = ['embeddings_']
 
     # Append suffixes based on preprocessing options
     if preprocessing_options.get('raw_description', False):
@@ -54,7 +56,7 @@ def _get_embeddings_folder_name(model, preprocessing_options):
     return embeddings_folder_name
 
 
-def get_embeddings_dict(table_name, description, model, embeddings_dict, preprocessing_options, use_openai):
+def create_embeddings(table_name, description, embeddings_dict, preprocessing_options):
     """
     Create a dictionary of embeddings with table (node) name as the key and its embeddings as the value.
 
@@ -73,13 +75,11 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, preproc
 
     DESCRIPTION_EMBEDDINGS_DIR = getenv('DESCRIPTION_EMBEDDINGS_DIR')
     TABLE_NAME_INCLUDED = getenv('TABLE_NAME_INCLUDED').lower() in ['true', 'yes', 1]
-    PROCESS_RAW = getenv('PROCESS_RAW').lower() in ['true', 'yes', 1]
-    COMMON_TERMS_FILENAME = getenv('COMMON_TERMS_FILENAME')
     POS_TAGGED = getenv('POS_TAGGED').lower() in ['true', 'yes', 1]
     NOUNS_ONLY = getenv('NOUNS_ONLY').lower() in ['true', 'yes', 1]
 
     embeddings_filename = table_name + '_embeddings.npy'
-    embeddings_folder_name = _get_embeddings_folder_name(model, preprocessing_options)
+    embeddings_folder_name = _get_embeddings_folder_name(preprocessing_options)
     embeddings_dir_full_path = DESCRIPTION_EMBEDDINGS_DIR + '/' + embeddings_folder_name
 
     if is_file_in_subdirectory(embeddings_dir_full_path, embeddings_filename):
@@ -90,12 +90,11 @@ def get_embeddings_dict(table_name, description, model, embeddings_dict, preproc
             description = table_name + " " + description
         
         if preprocessing_options['raw_description']:
-            embedder = TextEmbedder(description, model)
+            embedder = TextEmbedder(description)
         else:
-            # common_terms = read_lines(COMMON_TERMS_FILENAME)
             preprocessed_text = TextPreprocessor(description).preprocess(preprocessing_options, POS_TAGGED, NOUNS_ONLY)
             preprocessed_texts[table_name] = preprocessed_text
-            embedder = TextEmbedder(preprocessed_text, model)
+            embedder = TextEmbedder(preprocessed_text)
             
         embeddings = embedder.create_embeddings()
         embedder.save_embeddings(embeddings, embeddings_dir_full_path, embeddings_filename)
