@@ -1,8 +1,8 @@
-import os, re, csv
+import json, os, re
 
 def make_subdirectory(subdirectory_name):
     """
-    Create a new sub directory with the specified name within the current directory.
+    Creates a new sub directory with the specified name within the current directory.
 
     Args:
         - subdirectory_name (str): The name of the subdirectory to be created.
@@ -19,7 +19,7 @@ def make_subdirectory(subdirectory_name):
 
 def reset_community_id_numbers(partition, count=0):
     """
-    Reset the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
+    Resets the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
     
     Args:
         - partition (dict): A dictionary representing a partition where keys are nodes and values are community IDs.
@@ -47,7 +47,7 @@ def reset_community_id_numbers(partition, count=0):
 
 def extract_substring_between_strings(text, start_str, end_str):
     """
-    Extract the substring located between two specified strings in the given text.
+    Extracts the substring located between two specified strings in the given text.
 
     Args:
         - text (str): The input text from which the word will be extracted.
@@ -70,7 +70,7 @@ def extract_substring_between_strings(text, start_str, end_str):
 
 def is_file_in_subdirectory(subdirectory_name, filename):
     """
-    Check if a file with a given filename is in a sub directory within the current direction,
+    Checks if a file with a given filename is in a sub directory within the current direction,
 
     Args:
         - subdirectory_name (str): The name of the sub directory.
@@ -87,125 +87,49 @@ def is_file_in_subdirectory(subdirectory_name, filename):
     file_path = os.path.join(os.getcwd(), subdirectory_name, filename)
     return os.path.isfile(file_path)
 
-def read_lines(filename):
+def include_nodes_and_edges(nodes, edges, include_nodes):
     """
-    Read lines from a text file and return them as a list.
-
+    Filters the nodes and edges to include only the specified nodes and their associated edges.
+    
     Args:
-        - filename (str): The path to the text file.
-
-    Returns:
-        - list: A list containing the lines read from the text file.
-
-    Example:
-        >>> lines = read_lines('example.txt')
-    """
-
-    with open(filename, 'r') as file:
-        return [line.strip() for line in file.readlines()]
-
-def filter_values_by_dictionary(values, dictionary):
-    """
-    Filter a list of values by checking for their presence in the keys of a dictionary.
-
-    Args:
-        values (list): The list of values to be filtered.
-        dictionary (dict): The dictionary containing keys to be used for filtering.
+        nodes (list): List of all nodes.
+        edges (list of tuple): List of edges, where each edge is a tuple (node1, node2).
+        include_nodes (list): List of nodes to include.
     
     Returns:
-        list: A list containing values from the input list that are also present as keys in the dictionary.
-
-    Example:
-    >>> my_dict = {'a': 1, 'b': 2, 'c': 3}
-    >>> my_values = ['a', 'b', 'd', 'e']
-    >>> result = filter_values_by_dictionary(my_values, my_dict)
-    >>> print(result)
-    ['a', 'b']
+        tuple: A tuple containing two elements:
+            - filtered_nodes (list): List of nodes included in include_nodes.
+            - filtered_edges (list of tuple): List of edges where both nodes are in include_nodes.
     """
+    
+    include_set = set(include_nodes)  # Convert to set for faster lookup
 
-    return list(set(values) & set(dictionary.keys()))
+    # Filter nodes
+    filtered_nodes = [node for node in nodes if node in include_set]
+    
+    # Filter edges where both nodes are in include_set
+    filtered_edges = [
+        edge for edge in edges if edge[0] in include_set and edge[1] in include_set
+    ]
+    
+    return filtered_nodes, filtered_edges
 
-def to_boolean(value):
+def dict_to_json_format(input_dict):
     """
-    Convert a string or value to a boolean.
+    Converts a dictionary into a JSON-formatted string.
+
+    This function takes a dictionary where keys represent names and values represent descriptions,
+    and transforms it into a JSON-formatted string of a list of dictionaries. Each dictionary in
+    the list contains two keys: 'name' (the original dictionary's key) and 'description' 
+    (the corresponding value).
 
     Args:
-        - value (str): The value to be converted to a boolean. This value should be a string that can be interpreted as a boolean. Common representations include 'true', 'false', '1', '0', and their variations in different cases.
+        input_dict (dict): A dictionary with string keys and values.
 
     Returns:
-        - bool: Returns `True` if the input value is not 'false' or '0' (case-insensitive). Otherwise, returns `False`.
-
-    Example:
-        >>> to_boolean('true')
-        True
-        >>> to_boolean('False')
-        False
-        >>> to_boolean('0')
-        False
-        >>> to_boolean('1')
-        True
-        >>> to_boolean('yes')
-        True
+        str: A JSON-formatted string representing a list of dictionaries, each with 'name' 
+        and 'description' keys, formatted with an indentation of 4 spaces.
     """
 
-    return value not in ['false', '0']
-
-
-def create_csv_from_text(response_text, filename='communities_labels.csv'):
-    """
-    Create a CSV file from a given text containing community labels.
-
-    Args:
-        - response_text (str): The input text containing community and label information.
-        - filename (str): The name of the CSV file to be created.
-    """
-
-    # Extract community and label using regex
-    matches = re.findall(r'#Community (\d+): (\w+)', response_text)
-
-    # Remove duplicates by converting to a set and back to a list
-    unique_matches = list(set(matches))
-
-    # Sort by community
-    unique_matches.sort(key=lambda x: int(x[0]))
-
-    # Write to CSV
-    with open(filename, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['community', 'label'])  # Write header
-        writer.writerows(unique_matches)  # Write data
-
-    print(f"CSV file '{filename}' has been created successfully.")
-
-def calculate_max_tokens(num_communities, max_words_per_label=2, avg_tokens_per_word=2, buffer=20):
-    """
-    Calculate the maximum number of tokens required for a response.
-
-    Args:
-        - num_communities (int): The number of communities to include in the response.
-        - max_words_per_label (int): The maximum number of words in each label (default is 2).
-        - avg_tokens_per_word (int): The average number of tokens per word (default is 2).
-        - buffer (int): Additional tokens to add as a buffer (default is 20).
-
-    Returns:
-        - int: The estimated maximum number of tokens needed.
-    """
-    # Tokens for static part of each line: "Community X: "
-    static_tokens_per_line = len("Community X: ")
-
-    # Tokens for each label
-    tokens_per_label = max_words_per_label * avg_tokens_per_word
-
-    # Tokens for each newline character
-    newline_tokens = 1
-
-    # Calculate tokens per line
-    tokens_per_line = static_tokens_per_line + tokens_per_label + newline_tokens
-
-    # Total tokens for all communities
-    total_tokens = tokens_per_line * num_communities
-
-    # Add buffer tokens
-    total_tokens += buffer
-
-    return total_tokens
+    json_list = [{'name': key, 'description': value} for key, value in input_dict.items()]
+    return json.dumps(json_list, indent=4)
