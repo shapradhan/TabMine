@@ -21,33 +21,44 @@ class Graph(nx.Graph):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
-    def get_connected_components(self, nodes_in_community):
-        """
-        Identify and return the connected components within a given set of nodes in a community.
 
-        This method finds all the connected subgraphs (components) within the specified subset of nodes.
-        Each connected component is a maximal subgraph in which any two vertices are connected to each other
-        by paths, and which is connected to no additional vertices in the containing graph.
+    def wrap_label(self, label, max_length):
+        """
+        Wraps a label text into multiple lines with a specified maximum line length.
 
         Args:
-            nodes_in_community (list): A list of nodes representing a community within the graph. 
+            label (str): The label text to be wrapped.
+            max_length (int): The maximum length of each line.
 
         Returns:
-            List[set]: A list of sets, where each set contains the nodes that form a connected component within the
-            specified community. Each connected component is represented as a set of nodes.
-
+            str: The wrapped label text with each line not exceeding the specified maximum length.
+        
         Example:
-            >>> nodes_in_community = [1, 2, 3, 4, 5]
-            >>> connected_components = self.get_connected_components(nodes_in_community)
-            >>> print(connected_components)
-            [{1, 2}, {3, 4, 5}]
+            label = "This is a long label that needs to be wrapped."
+            max_length = 10
+            wrapped_label = wrap_label(label, max_length)
+            print(wrapped_label)
         """
+        words = label.split()
+        wrapped_label = []
+        current_line = []
 
-        subgraph = self.subgraph(nodes_in_community)
-        return list(nx.connected_components(subgraph))
+        for word in words:
+            # Check if adding the word exceeds the maximum line length
+            if sum(len(w) for w in current_line) + len(word) + len(current_line) > max_length:
+                wrapped_label.append(' '.join(current_line))
+                current_line = [word]
+            else:
+                current_line.append(word)
 
-    def display_graph(self, partition, save=False, save_dir_path=None):
+        # Add any remaining words in current_line as the last line
+        if current_line:
+            wrapped_label.append(' '.join(current_line))
+
+        return '\n'.join(wrapped_label)
+
+
+    def display_graph(self, partition, save=False, filename='graph.png', save_dir_path=None):
         """
         Visualize the graph with nodes colored based on the given partition.
 
@@ -72,20 +83,28 @@ class Graph(nx.Graph):
             - If `save` is True, the visualization will be saved to a file named 'graph.png' in the desktop.
         """
 
+        plt.clf()  # Clear the current figure
         pos = nx.spring_layout(self)  # Position nodes using the spring layout algorithm
-        node_colors = [partition[node] for node in self.nodes()]
-        nx.draw(self, pos, with_labels=True, node_color=node_colors, cmap=plt.cm.tab10, node_size=1500, font_size=12, font_weight='bold')
-        nx.draw_networkx_edge_labels(self, pos)
-        
-        # Get the path to the desktop directory
-        # save_dir_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
 
+        # Create a list of colors based on the partition
+        node_colors = [partition[node] for node in self.nodes()]
+
+        # Create labels that include community IDs
+        labels = {node: f"{node} (Community {partition[node]})" for node in self.nodes()}
+
+        max_length = 15  # Set your desired max length
+        labels = {node: self.wrap_label(f"{node} (C {partition[node]})", max_length) for node in self.nodes()}
+
+        # Draw the graph with the updated labels
+        nx.draw(self, pos, with_labels=True, labels=labels, node_color=node_colors, cmap=plt.cm.tab10, node_size=2000, font_size=20, font_weight='bold')
+        nx.draw_networkx_edge_labels(self, pos)
+                
         # Set the figure size to fill the entire screen
         fig = plt.gcf()
-        fig.set_size_inches(18.5, 10.5)  
+        fig.set_size_inches(50, 30)  
 
         if save:
-            file_path = os.path.join(save_dir_path, "graph.png")
+            file_path = os.path.join(save_dir_path, filename)
             plt.savefig(file_path)
 
             os.startfile(file_path)
@@ -115,11 +134,9 @@ class Graph(nx.Graph):
         
         # Add nodes with community membership as an attribute
         for node in G_igraph.vs:
-            # G_nx.add_node(node['name'], community=partition[node['name']])
             self.add_node(node['name'], community=partition[node['name']])
 
         # Add edges to the networkx graph
         for edge in G_igraph.es:
             source, target = edge.tuple
             self.add_edge(G_igraph.vs[source]['name'], G_igraph.vs[target]['name'])
-            
