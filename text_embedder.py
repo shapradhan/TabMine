@@ -4,7 +4,7 @@ from openai import AzureOpenAI
 from utils.general import make_subdirectory
 
 class TextEmbedder:
-    def __init__(self, text='', model=None):
+    def __init__(self, text=''):
         """
         Initialize the instance with the provided text and model.
 
@@ -15,22 +15,15 @@ class TextEmbedder:
         Args:
             - text (str, optional):  The initial text data to be associated with the instance. The default is an empty string.
         
-            - model (str or SentenceTransformer, optional): A pre-trained model to be used by the instance for various operations. This can be either a
-            string representing the model's name or a `SentenceTransformer` object. The default is None.
-
         Returns:
             None
 
         Example:
-            >>> instance = TextEmbedder(text='Sample text', model=pretrained_model)
+            >>> instance = TextEmbedder(text='Sample text')
             >>> print(instance.text)
             'Sample text'
-            >>> print(instance.model)
-                <pretrained_model>
         """
-
         self.text = text
-        self.model = model
    
     def create_embeddings(self):
         """
@@ -44,32 +37,20 @@ class TextEmbedder:
             >>> embeddings = self.create_embeddings()
             >>> print(embeddings)
             [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, ...]
-
-            >>> embeddings = self.create_embeddings()
-            >>> print(embeddings)
-            <tf.Tensor: shape=(..., ...), dtype=float32, numpy=...>
         """
 
-        self.text = re.split(r'[.!?]', self.text)
-        self.text = [s.strip() for s in self.text if s.strip()]
+        client = AzureOpenAI(
+            api_key = os.getenv("AZURE_OPENAI_API_KEY"),  
+            api_version = os.getenv("AZURE_OPENAI_VERSION"),  
+            azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT") 
+        )      
 
-        if self.model == 'gpt3.5':
-            client = AzureOpenAI(
-                api_key = os.getenv("AZURE_OPENAI_API_KEY"),  
-                api_version = os.getenv("AZURE_OPENAI_VERSION"),  
-                azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT") 
-            )      
+        response = client.embeddings.create(
+            input = self.text,
+            model = os.getenv("OPENAI_MODEL_NAME") 
+        )
 
-            response = client.embeddings.create(
-                input = self.text,
-                model = os.getenv("OPENAI_MODEL_NAME") 
-            )
-
-            embeddings = response.data[0].embedding
-
-        else:
-            embeddings = self.model.encode(self.text, convert_to_tensor=True)
-        return embeddings
+        return response.data[0].embedding
 
 
     def save_embeddings(self, embeddings, folder_name, filename):
