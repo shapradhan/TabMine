@@ -90,10 +90,10 @@ class TableColumnsManager:
         try:
             cursor = connection.cursor()
 
-            for category, tables in tables_dict.items():
-                fields_dict[category] = {}
-                for subcategory, table_list in tables.items():
-                    fields_dict[category][subcategory] = {}
+            for business_doc, label_table_dict in tables_dict.items():
+                fields_dict[business_doc] = {}
+                for label, table_list in label_table_dict.items():
+                    fields_dict[business_doc][label] = {}
                     if table_list:
                         for table in table_list:
                             cursor.execute("""
@@ -102,7 +102,7 @@ class TableColumnsManager:
                                 WHERE table_schema = 'public' AND table_name = %s;
                             """, (table,))
 
-                            fields_dict[category][subcategory][table] = [
+                            fields_dict[business_doc][label][table] = [
                                 row[0].replace('_', ' ') for row in cursor.fetchall()
                             ]
         except Exception as e:
