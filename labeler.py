@@ -7,6 +7,7 @@ from openai import AzureOpenAI, BadRequestError
 
 from text_embedder import TextEmbedder
 from utils.general import dict_to_json_format, is_file_in_subdirectory
+from utils.embeddings import calculate_average_similarity
 
 class Labeler:
     """
@@ -254,3 +255,108 @@ class Labeler:
             embedder.save_embeddings(embeddings, dir, embeddings_filename)
             
         return embeddings_dict
+    
+    def single_barebone_extractor(self, client, deployment_name, table, description):
+        initial_system_prompt = """
+            We have the following name and description of a table, respectively.
+            The name and description are separated by a colon. 
+            Shorten the description to only few words that reflects the information saved in this table.
+        """
+
+        final_system_prompt = f"""
+                Please use only few words for your response.
+                Do not use characters such as slash or a period in your response.
+                Please only write what information the table stores.
+            """
+        
+        response = client.chat.completions.create(
+                model=deployment_name,
+                messages=[
+                    {"role": "system", "content": initial_system_prompt},
+                    {"role": "user", "content": f"{table} : {description}"},
+                    {"role": "system", "content": final_system_prompt},
+                ],
+                temperature=0
+            )
+        
+        response_text = response.choices[0].message.content
+        return response_text
+
+
+    def _get_embeddings(self):
+        """
+        Get embeddings for the documents from Domain Knowledge Definition file and the labels assigned to the communities.
+
+        Args:
+            model (str or SentenceTransformer): The name of the model if OpenAI is to be used or a SentenceTransformer model.
+        
+        Returns:
+            tuple: A tuple consisting of two values.
+            - The first value (list): A list of embeddings for the documents from the Domain Knowledge Definition file.
+            - The second value (list): A list of embeddings for the community labels.
+                
+        Note:
+            - This method is intended for internal use within the class and may not be directly accessible from outside the class.
+        """
+
+        document_embeddings = {}
+        label_embeddings = {}
+
+        DOCUMENT_EMBEDDINGS_DIR = os.getenv('DOCUMENT_EMBEDDINGS_DIR')
+        LABEL_EMBEDDINGS_DIR = os.getenv('LABEL_EMBEDDINGS_DIR')
+        
+        for doc in self.documents:
+            document_embeddings = self.load_or_create_embeddings(doc, DOCUMENT_EMBEDDINGS_DIR, document_embeddings)
+
+        for label in self.labels.values():
+            label_embeddings = self.load_or_create_embeddings(label, LABEL_EMBEDDINGS_DIR, label_embeddings)
+        return document_embeddings, label_embeddings
+    
+
+      
+
+    def compute_similarity_scores(self, similarity_measure):
+            """
+            Compute similarity scores between documents from the Domain Knowledge Definition file and labels assigned to the communities.
+
+            Args:
+                model (str or SentenceTransformer): The model used for computing similarity. This can be:
+                    - A string representing the name of the OpenAI model to use.
+                    - An instance of SentenceTransformer for other similarity computations.
+                similarity_measure (function): A function or callable used to calculate the similarity score between documents and community labels. This function should take two inputs (a document and a label) and return a similarity score.
+
+            Returns:
+                dict: A dictionary where:
+                    - The keys are document identifiers (e.g., document names or IDs).
+                    - The values are dictionaries with community labels as keys and their corresponding similarity scores as values. Each inner dictionary represents the similarity scores between a particular document and each community label.
+
+            Example:
+                {
+                    'doc1': {
+                        'labelA': 0.85,
+                        'labelB': 0.75
+                    },
+                    'doc2': {
+                        'labelA': 0.90,
+                        'labelB': 0.65
+                    }
+                }
+            """
+
+            similarity_scores = {}
+            document_embeddings, label_embeddings = self._get_embeddings()
+
+            for doc, doc_emb in document_embeddings.items():
+                temp_dict = {}
+                for label, label_emb in label_embeddings.items():
+                    similarity_score = calculate_average_similarity([doc_emb, label_emb], similarity_measure)
+                    temp_dict[label] = similarity_score
+
+                # Sort the temp_dict by similarity scores in descending order
+                sorted_temp_dict = dict(sorted(temp_dict.items(), key=lambda item: item[1], reverse=True))
+                
+                similarity_scores[doc] = sorted_temp_dict
+
+            return similarity_scores         
+  
+            
