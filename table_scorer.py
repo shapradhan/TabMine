@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from text_embedder import TextEmbedder
 
 class TableScorer:
-    def __init__(self, biz_docs, fields, graph, field_weight=0.4, profile_weight=0.4, neighbor_weight=0.2):
+    def __init__(self, biz_docs, table_columns, graph, field_weight=0.4, profile_weight=0.4, neighbor_weight=0.2):
         """
         A class to score tables based on business documents, field relevance, and graph-based relationships.
 
@@ -24,7 +24,7 @@ class TableScorer:
         """
 
         self.biz_docs = biz_docs
-        self.fields = fields
+        self.table_columns = table_columns
         self.graph = graph
         self.field_weight = field_weight
         self.profile_weight = profile_weight
@@ -144,10 +144,9 @@ class TableScorer:
             ]
             doc_profile_embedding = self._create_average_embedding(doc_field_embeddings)
 
-            if isinstance(self.fields, dict) and biz_doc_name in self.fields:
+            if isinstance(self.table_columns, dict) and biz_doc_name in self.table_columns:
                 relevant_tables[biz_doc_name] = {}
-
-                for label, tables in self.fields[biz_doc_name].items():
+                for label, tables in self.table_columns[biz_doc_name].items():
                     table_similarities = {}
 
                     for table_name, t_fields in tables.items():
@@ -184,7 +183,6 @@ class TableScorer:
                                     neighbor_similarity_scores.append(neighbor_similarity_score)
 
                             neighbor_similarity_score = sum(neighbor_similarity_scores) / len(neighbor_similarity_scores) if neighbor_similarity_scores else 0
-
                         # Combine scores with respective weights
                         combined_score = (
                             self.field_weight * individual_field_similarity +
