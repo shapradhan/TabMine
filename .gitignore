@@ -265,4 +265,23 @@ $RECYCLE.BIN/
 
 
 # Custom
-database.ini
+database_postgres.ini
+database_mysql.ini
+old_code
+playgrounds
+sql
+*.ini
+embeddings
+descriptions
+tests
+label_embeddings
+dkd_embeddings
+dkd
+embeddings_old
+label_embeddings_old
+.vscode
+*.txt
+*.csv
+*.env.*
+*.env*
+.vs

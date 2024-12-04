@@ -1,14 +1,14 @@
-import os, re
+import json, os, re
 
 def make_subdirectory(subdirectory_name):
     """
-    Create a new sub directory with the specified name within the current directory.
+    Creates a new sub directory with the specified name within the current directory.
 
     Args:
-    subdirectory_name (str): The name of the subdirectory to be created.
+        - subdirectory_name (str): The name of the subdirectory to be created.
 
     Returns:
-        bool: True if a sub directory is successfully created, Otherwise, False.
+        - bool: True if a sub directory is successfully created, Otherwise, False.
     """
 
     if not os.path.exists(subdirectory_name):
@@ -19,13 +19,13 @@ def make_subdirectory(subdirectory_name):
 
 def reset_community_id_numbers(partition, count=0):
     """
-    Reset the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
+    Resets the community ID in a partition dictionary as the algorithm to move connector nodes assigns higher ID values.
     
     Args:
-        partition (dict): A dictionary representing a partition where keys are nodes and values are community IDs.
+        - partition (dict): A dictionary representing a partition where keys are nodes and values are community IDs.
     
     Returns:
-        dict: A dictionary representing a partition where the community IDs have been reset and starts incrementally from 0.
+        - dict: A dictionary representing a partition where the community IDs have been reset and starts incrementally from 0.
 
     Example:
         >>> partition = {'A': 7, 'B': 18, 'C': 7, 'D': 5}
@@ -47,15 +47,15 @@ def reset_community_id_numbers(partition, count=0):
 
 def extract_substring_between_strings(text, start_str, end_str):
     """
-    Extract the substring located between two specified strings in the given text.
+    Extracts the substring located between two specified strings in the given text.
 
     Args:
-        text (str): The input text from which the word will be extracted.
-        start_str (str): The starting string marking the beginning of the target word.
-        end_str (str): The ending string marking the end of the target word.
+        - text (str): The input text from which the word will be extracted.
+        - start_str (str): The starting string marking the beginning of the target word.
+        - end_str (str): The ending string marking the end of the target word.
 
     Returns:
-        str or None: The substring between start_str and end_str if found, or None if not found.
+        - str or None: The substring between start_str and end_str if found, or None if not found.
     
     Example:
         >>> get_substring_between_strings('gobbledygook', 'ob', 'go')
@@ -70,14 +70,14 @@ def extract_substring_between_strings(text, start_str, end_str):
 
 def is_file_in_subdirectory(subdirectory_name, filename):
     """
-    Check if a file with a given filename is in a sub directory within the current direction,
+    Checks if a file with a given filename is in a sub directory within the current direction,
 
     Args:
-        subdirectory_name (str): The name of the sub directory.
-        filename (str): The name of the file that needs to be checked in the sub directory.
+        - subdirectory_name (str): The name of the sub directory.
+        - filename (str): The name of the file that needs to be checked in the sub directory.
     
     Returns:
-        bool: True if the file is in the sub directory, Otherwise, False.
+        - bool: True if the file is in the sub directory, Otherwise, False.
     
     Example:
         >>> is_file_in_subdirectory('subdir', 'file.txt')
@@ -87,40 +87,49 @@ def is_file_in_subdirectory(subdirectory_name, filename):
     file_path = os.path.join(os.getcwd(), subdirectory_name, filename)
     return os.path.isfile(file_path)
 
-def read_lines(filename):
+def include_nodes_and_edges(nodes, edges, include_nodes):
     """
-    Read lines from a text file and return them as a list.
-
+    Filters the nodes and edges to include only the specified nodes and their associated edges.
+    
     Args:
-        filename (str): The path to the text file.
-
-    Returns:
-        list: A list containing the lines read from the text file.
-
-    Example:
-        >>> lines = read_lines('example.txt')
-    """
-
-    with open(filename, 'r') as file:
-        return [line.strip() for line in file.readlines()]
-
-def filter_values_by_dictionary(values, dictionary):
-    """
-    Filter a list of values by checking for their presence in the keys of a dictionary.
-
-    Args:
-        values (list): The list of values to be filtered.
-        dictionary (dict): The dictionary containing keys to be used for filtering.
+        nodes (list): List of all nodes.
+        edges (list of tuple): List of edges, where each edge is a tuple (node1, node2).
+        include_nodes (list): List of nodes to include.
     
     Returns:
-        list: A list containing values from the input list that are also present as keys in the dictionary.
+        tuple: A tuple containing two elements:
+            - filtered_nodes (list): List of nodes included in include_nodes.
+            - filtered_edges (list of tuple): List of edges where both nodes are in include_nodes.
+    """
+    
+    include_set = set(include_nodes)  # Convert to set for faster lookup
 
-    Example:
-    >>> my_dict = {'a': 1, 'b': 2, 'c': 3}
-    >>> my_values = ['a', 'b', 'd', 'e']
-    >>> result = filter_values_by_dictionary(my_values, my_dict)
-    >>> print(result)
-    ['a', 'b']
+    # Filter nodes
+    filtered_nodes = [node for node in nodes if node in include_set]
+    
+    # Filter edges where both nodes are in include_set
+    filtered_edges = [
+        edge for edge in edges if edge[0] in include_set and edge[1] in include_set
+    ]
+    
+    return filtered_nodes, filtered_edges
+
+def dict_to_json_format(input_dict):
+    """
+    Converts a dictionary into a JSON-formatted string.
+
+    This function takes a dictionary where keys represent names and values represent descriptions,
+    and transforms it into a JSON-formatted string of a list of dictionaries. Each dictionary in
+    the list contains two keys: 'name' (the original dictionary's key) and 'description' 
+    (the corresponding value).
+
+    Args:
+        input_dict (dict): A dictionary with string keys and values.
+
+    Returns:
+        str: A JSON-formatted string representing a list of dictionaries, each with 'name' 
+        and 'description' keys, formatted with an indentation of 4 spaces.
     """
 
-    return list(set(values) & set(dictionary.keys()))
+    json_list = [{'name': key, 'description': value} for key, value in input_dict.items()]
+    return json.dumps(json_list, indent=4)

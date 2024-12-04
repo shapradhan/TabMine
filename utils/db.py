@@ -1,3 +1,7 @@
+import mysql.connector
+import os
+import psycopg2
+
 from postgres_data_extractor import get_all_fks, get_table_names as get_table_names_p
 from mysql_data_extractor import get_all_foreign_key_relationships, get_table_names as get_table_names_m
 from utils.general import extract_substring_between_strings
@@ -41,20 +45,25 @@ def _get_edges(foreign_key_relation_list):
 
 def get_nodes_and_edges_from_db(conn, db_type, db_name):
     """ 
-    Get the nodes and edges from a database. Nodes represent the tables in the database and edges represent the relationships between the tables.
+    Retrieve the nodes (tables) and edges (relationships) from a specified database.
+
+    This function connects to a database, identifies the tables (nodes), and extracts the relationships between them (edges). 
+    The exact method of extracting relationships depends on the type of database (PostgreSQL or MySQL).
 
     Args:
-        db_type (str): The type of the databse. Options are postgres and mysql.
-        db_name (str): The name of the database from which the nodes and the edges have to extracted.
+        conn (object): A connection object to the database.
+        db_type (str): The type of the database. Options are 'postgres' and 'mysql'.
+        db_name (str): The name of the database from which the nodes and edges will be extracted.
 
     Returns:
-        list, list: Lists containing nodes and edges in the database.
+        list, list: A tuple containing two lists:
+            - The first list contains the nodes (tables) in the database.
+            - The second list contains the edges (relationships between tables).
     """
 
     with conn:
         cursor = conn.cursor()
-
-        if db_type == 'postgres':
+        if db_type == 'postgresql':
             foreign_key_relation_list = get_all_fks(cursor)
             nodes = [i[0] for i in get_table_names_p(cursor)]
         elif db_type == 'mysql':
@@ -64,3 +73,44 @@ def get_nodes_and_edges_from_db(conn, db_type, db_name):
 
     edges = [_get_edges(i) for i in foreign_key_relation_list]
     return nodes, edges
+
+def create_connnection(db_type, database):
+    """
+    Establish a connection to a specified database.
+
+    This function creates a connection to a database based on the provided database type. 
+    It supports various database types and establishes the necessary connection 
+    parameters for interacting with the specified database.
+
+    Args:
+        db_type (str): The type of the database (e.g., 'postgres', 'mysql', etc.).
+        database (str): The name of the database to connect to.
+
+    Returns:
+        object: A connection object that can be used to interact with the database.
+    
+    Raises:
+        ValueError: If the db_type is not supported.
+        Exception: If an error occurs while establishing the connection.
+    """
+    
+    if db_type == 'mysql':
+        db_config_mysql = {
+            'host': os.getenv('MYSQL_HOST'),
+            'user': os.getenv('MYSQL_USER'),
+            'password': os.getenv('MYSQL_PASSWORD'),
+            'port': os.getenv('MYSQL_PORT')
+        }
+        connection = mysql.connector.connect(**db_config_mysql)
+    elif db_type == 'postgresql':
+        db_config_postgres = {
+            'host': os.getenv('POSTGRES_HOST'),
+            'user': os.getenv('POSTGRES_USER'),
+            'password': os.getenv('POSTGRES_PASSWORD'),
+            'port': os.getenv('POSTGRES_PORT'),
+            'dbname': 'postgres'
+        }
+        print('db_config_postgres', db_config_postgres)
+        db_config_postgres['dbname'] = database
+        connection = psycopg2.connect(**db_config_postgres)
+    return connection
